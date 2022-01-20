@@ -15,7 +15,7 @@ def Model(device):
 
     return net
 
-def Training(train_dataloader,train_data,agent,epoch,nb_epoch,model,optimizer,loss_function,label,writer):
+def Training(train_dataloader,train_data,agent,epoch,nb_epoch,model,optimizer,loss_function,label,writer,device):
     print(f"---------- epoch :{epoch + 1}/{nb_epoch} ----------")
     print("-" * 30)
     model.train() # Switch to training mode
@@ -28,7 +28,7 @@ def Training(train_dataloader,train_data,agent,epoch,nb_epoch,model,optimizer,lo
                     verts=V,   
                     faces=F, 
                     textures=textures
-                    )
+                    ).to(GV.DEVICE)
 
         agent.position_agent(RI,V,label,GV.DEVICE)
 
@@ -46,16 +46,21 @@ def Training(train_dataloader,train_data,agent,epoch,nb_epoch,model,optimizer,lo
             # print(batch.shape)
             inputs = torch.cat((inputs,batch.to(GV.DEVICE)),dim=0) #[num_im*batch,channels,size,size]
             y_true = torch.cat((y_true,land_images[i].to(GV.DEVICE)),dim=0) #[num_im*batch,channels,size,size]
-        print(inputs.shape)
-        print(y_true.shape)
+  
         inputs = inputs.to(dtype=torch.float32)
         y_true = y_true.to(dtype=torch.float32)
+       
+        # print(y_true.shape)
+        y_true_grey = Convert_RGB_to_grey(y_true)
+        # print(y_true_grey.shape)
+        PlotAgentViews(y_true_grey.detach().unsqueeze(0).cpu())
 
-        print(inputs.type())
-        print(y_true.type())
+        # print(inputs.type())
+        # print(y_true.type())
 
         optimizer.zero_grad()
         outputs = model(inputs)
+        # PlotAgentViews(outputs.detach().unsqueeze(0).cpu())
         loss = loss_function(outputs,y_true)
         loss.backward()
         optimizer.step()

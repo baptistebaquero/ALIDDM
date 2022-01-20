@@ -64,7 +64,8 @@ def main(args):
             optimizer=optimizer,
             loss_function=loss_function,
             label=args.label,
-            writer=writer
+            writer=writer,
+            device=GV.DEVICE
         )
 
         # if (epoch) % args.val_freq == 0:
@@ -82,17 +83,17 @@ def main(args):
         #         writer=writer
         #     )
             
-            # if early_stopping.early_stop == True :
-            #     print('-------- ACCURACY --------')
-            #     Accuracy(agents=agents,
-            #             test_dataloader=test_dataloader,
-            #             agents_ids=agents_ids,
-            #             min_variance = args.min_variance,
-            #             loss_function=loss_function,
-            #             device=device
-            #             )
+        #     if early_stopping.early_stop == True :
+        #         print('-------- ACCURACY --------')
+        #         Accuracy(agents=agents,
+        #                 test_dataloader=test_dataloader,
+        #                 agents_ids=agents_ids,
+        #                 min_variance = args.min_variance,
+        #                 loss_function=loss_function,
+        #                 device=device
+        #                 )
 
-            #     break
+        #         break
 
 
 
@@ -103,13 +104,13 @@ def main(args):
     #         verts=V,   
     #         faces=F, 
     #         textures=textures
-    #     ) # batchsize
+    #     ).to(GV.DEVICE) # batchsize
        
     #     position_agent = a.position_agent(RI,V,args.label,GV.DEVICE)
     #     # PlotMeshAndSpheres(meshes,position_agent,0.02,[1,1,1])       
 
     #     img_batch =  a.GetView(meshes)
-    #     PlotAgentViews(img_batch)
+    #     PlotAgentViews(img_batch.cpu())
 
 
     #     lst_landmarks = Get_lst_landmarks(LP,GV.LABEL[args.label])
@@ -119,6 +120,10 @@ def main(args):
        
        
         # meshes = Generate_Mesh(V,F,CN,lst_landmarks,GV.DEVICE)
+    #     img_batch =  a.GetView(meshes)
+
+        # PlotAgentViews(img_batch.cpu())
+
         # dic = {"teeth_landmarks_meshes": meshes}
         # plot_fig(dic)
 
@@ -150,11 +155,11 @@ if __name__ == '__main__':
 
     #Environment
     input_param.add_argument('-j','--jaw',type=str,help="Prepare the data for uper or lower landmark training (ex: L U)", default="L")
-    input_param.add_argument('-sr', '--sphere_radius', type=float, help='Radius of the sphere with all the cameras', default=0.3)
+    input_param.add_argument('-sr', '--sphere_radius', type=float, help='Radius of the sphere with all the cameras', default=0.2)
     input_param.add_argument('--label', type=str, help='label of the teeth',default="18")
    
     #Training data
-    input_param.add_argument('--image_size',type=int, help='size of the picture', default=60)
+    input_param.add_argument('--image_size',type=int, help='size of the picture', default=224)
     input_param.add_argument('--blur_radius',type=int, help='blur raius', default=0)
     input_param.add_argument('--faces_per_pixel',type=int, help='faces per pixels', default=1)
     

@@ -44,16 +44,13 @@ class FlyByDataset(Dataset):
         else:
             angle = 0 
             vector = np.array([0, 0, 1])
-
-        TensorFloat = ToTensor(device=self.device)
-        TensorInt = ToTensor(device=self.device)
         
         surf = ComputeNormals(surf) 
         landmark_pos = self.get_landmarks_position(idx, mean_arr, scale_factor, angle, vector)
-        color_normals = TensorFloat(vtk_to_numpy(GetColorArray(surf, "Normals"))/255.0)
-        verts = TensorFloat(vtk_to_numpy(surf.GetPoints().GetData()))
-        faces = TensorInt(vtk_to_numpy(surf.GetPolys().GetData()).reshape(-1, 4)[:,1:])
-        region_id = ToTensor(dtype=torch.int64, device=GV.DEVICE)(vtk_to_numpy(surf.GetPointData().GetScalars("PredictedID")))
+        color_normals = ToTensor(dtype=torch.float32, device=self.device)(vtk_to_numpy(GetColorArray(surf, "Normals"))/255.0)
+        verts = ToTensor(dtype=torch.float32, device=self.device)(vtk_to_numpy(surf.GetPoints().GetData()))
+        faces = ToTensor(dtype=torch.int64, device=self.device)(vtk_to_numpy(surf.GetPolys().GetData()).reshape(-1, 4)[:,1:])
+        region_id = ToTensor(dtype=torch.int64, device=self.device)(vtk_to_numpy(surf.GetPointData().GetScalars("PredictedID")))
         region_id = torch.clamp(region_id, min=0)
         landmark_pos = torch.tensor(landmark_pos,dtype=torch.float32).to(self.device)
         mean_arr = torch.tensor(mean_arr,dtype=torch.float64).to(self.device)

@@ -30,6 +30,7 @@ from monai.transforms import (
     ToTensor
 )
 import monai
+import torchvision.transforms as transforms
 
 def GetLandmarkPosFromLP(lm_pos,target):
     lst_lm =  GV.LANDMARKS[GV.SELECTED_JAW]
@@ -288,3 +289,35 @@ def Generate_land_Mesh(lst_landmarks,device):
     )
     return meshes
 
+def Convert_RGB_to_grey(lst_images):
+    tens_images = torch.empty((0)).to(GV.DEVICE)
+    for image in lst_images:
+        # print(image.shape)
+        # image = image.to(GV.DEVICE)
+        image = image.cpu()
+        image = image[:-1,:,:]
+        image = transforms.ToPILImage()(image)
+        image = transforms.Grayscale(num_output_channels=1)(image)
+        image = transforms.ToTensor()(image)
+        print(image[0])
+        for row in image[0]:
+            for pix in row:
+                new_pix = torch.nn.Threshold(pix>0.5, 1)
+                pix = new_pix
+
+        tens_images = torch.cat((tens_images,image.unsqueeze(0).to(GV.DEVICE)),dim=0)
+
+    return tens_images
+
+# def Convert_RGB_to_grey(lst_images):
+#     tens_images = torch.empty((0)).to(GV.DEVICE)
+#     for images in lst_images:
+#         images = images.to(GV.DEVICE)
+#         images = images.cpu()
+#         images = [transforms.ToPILImage()(x) for x in images]
+#         images = [transforms.Grayscale()(x) for x in images]
+#         images = [transforms.ToTensor()(x) for x in images]
+#         # images = torch.stack(images,dim=0).to(GV.DEVICE)
+#         tens_images = torch.cat((tens_images,images.unsqueeze(0).to(GV.DEVICE)),dim=0)
+
+#     return tens_images

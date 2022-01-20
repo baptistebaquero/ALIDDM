@@ -37,7 +37,7 @@ for pid in range(icosahedron.GetNumberOfPoints()):
     spoint = icosahedron.GetPoint(pid)
     sphere_points.append([point for point in spoint])
 
-CAMERA_POSITION = np.array(sphere_points[:])
+CAMERA_POSITION = np.array(sphere_points[:2])
 # CAMERA_POSITION = np.array(sphere_points)
 
 
@@ -98,7 +98,7 @@ class Agent:
             images = images[:,:-1,:,:]
             
             # print(images.shape)
-            pix_to_face, zbuf, bary_coords, dists = self.renderer.rasterizer(meshes)
+            pix_to_face, zbuf, bary_coords, dists = self.renderer.rasterizer(meshes.clone())
             zbuf = zbuf.permute(0, 3, 1, 2)
             # print(dists.shape)
             y = torch.cat([images, zbuf], dim=1)
