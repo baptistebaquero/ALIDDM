@@ -52,21 +52,21 @@ def main(args):
     # early_stopping=EarlyStopping(patience=20, verbose=True, path=args.out)
     # early_stopping = EarlyStopping(patience=20, verbose=True)
     
-    for epoch in range(args.max_epoch):
-        print('-------- TRAINING --------')          
-        Training(
-            train_dataloader=train_dataloader,
-            train_data=train_data,
-            agent=agent,
-            epoch=epoch,
-            nb_epoch=args.max_epoch,
-            model=model,
-            optimizer=optimizer,
-            loss_function=loss_function,
-            label=args.label,
-            writer=writer,
-            device=GV.DEVICE
-        )
+    # for epoch in range(args.max_epoch):
+    #     print('-------- TRAINING --------')          
+    #     Training(
+    #         train_dataloader=train_dataloader,
+    #         train_data=train_data,
+    #         agent=agent,
+    #         epoch=epoch,
+    #         nb_epoch=args.max_epoch,
+    #         model=model,
+    #         optimizer=optimizer,
+    #         loss_function=loss_function,
+    #         label=args.label,
+    #         writer=writer,
+    #         device=GV.DEVICE
+    #     )
 
         # if (epoch) % args.val_freq == 0:
         #     print('-------- VALIDATION --------')
@@ -98,41 +98,58 @@ def main(args):
 
 
 
-    # for batch, (V, F, RI, CN, LP, MR, SF) in enumerate(train_dataloader):
-    #     textures = TexturesVertex(verts_features=CN)
-    #     meshes = Meshes(
-    #         verts=V,   
-    #         faces=F, 
-    #         textures=textures
-    #     ).to(GV.DEVICE) # batchsize
-       
-    #     position_agent = a.position_agent(RI,V,args.label,GV.DEVICE)
-    #     # PlotMeshAndSpheres(meshes,position_agent,0.02,[1,1,1])       
+    for batch, (V, F, RI, CN, LP, MR, SF) in enumerate(train_dataloader):
+        # print(V.shape)
+        # print(CN.shape)
+        position_agent = agent.position_agent(RI,V,args.label,GV.DEVICE)
 
-    #     img_batch =  a.GetView(meshes)
+        verts_rgb = torch.ones_like(CN)[None].squeeze(0)  # (1, V, 3)
+        verts_rgb[:,:, 0] *= 1  # red
+        verts_rgb[:,:, 1] *= 0  # green
+        verts_rgb[:,:, 2] *= 0  # blue
+        CN = verts_rgb
+        patch_region = Gen_patch(V, CN, LP, args.label, 0.02)
+        # meshes = Generate_Mesh(V,F,patch_region,lst_landmarks,GV.DEVICE)
+      
+
+
+
+
+        # print(patch_region.shape)
+        textures = TexturesVertex(verts_features=patch_region)
+        meshes = Meshes(
+            verts=V,   
+            faces=F, 
+            textures=textures
+        ).to(GV.DEVICE) # batchsize
+        
+        dic = {"teeth_landmarks_meshes": meshes}
+        plot_fig(dic)
+        # position_agent = agent.position_agent(RI,V,args.label,GV.DEVICE)
+        # PlotMeshAndSpheres(meshes,position_agent,0.02,[1,1,1])       
+
+    #     img_batch =  agent.GetView(meshes)
     #     PlotAgentViews(img_batch.cpu())
 
 
-    #     lst_landmarks = Get_lst_landmarks(LP,GV.LABEL[args.label])
+        # lst_landmarks = Get_lst_landmarks(LP,GV.LABEL[args.label])
     #     meshes_2 = Generate_land_Mesh(lst_landmarks,GV.DEVICE)
-    #     img_batch_2 =  a.GetView(meshes_2)
+    #     img_batch_2 =  agent.GetView(meshes_2)
     #     PlotAgentViews(img_batch_2)
        
-       
+        # patch_region = Gen_patch(V, RI, LP, args.label, 0.01)
         # meshes = Generate_Mesh(V,F,CN,lst_landmarks,GV.DEVICE)
-    #     img_batch =  a.GetView(meshes)
+        # img_batch =  agent.GetView(meshes)
 
         # PlotAgentViews(img_batch.cpu())
 
-        # dic = {"teeth_landmarks_meshes": meshes}
-        # plot_fig(dic)
 
         
 
-    # print(a.positions)
+    # print(agent.positions)
 
-    # PlotMeshAndSpheres(meshes,a.positions,0.02,[1,0,0])
-    # PlotAgentViews(a.GetView(meshes))
+    # PlotMeshAndSpheres(meshes,agent.positions,0.02,[1,0,0])
+    # PlotAgentViews(agent.GetView(meshes))
 
     # PlotDatasetWithLandmark(target,train_dataloader)
     
@@ -159,7 +176,7 @@ if __name__ == '__main__':
     input_param.add_argument('--label', type=str, help='label of the teeth',default="18")
    
     #Training data
-    input_param.add_argument('--image_size',type=int, help='size of the picture', default=224)
+    input_param.add_argument('--image_size',type=int, help='size of the picture', default=10)
     input_param.add_argument('--blur_radius',type=int, help='blur raius', default=0)
     input_param.add_argument('--faces_per_pixel',type=int, help='faces per pixels', default=1)
     

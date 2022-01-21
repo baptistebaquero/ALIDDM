@@ -18,10 +18,10 @@ from pytorch3d.renderer import (
     FoVPerspectiveCameras,
     FoVOrthographicCameras,
     RasterizationSettings, MeshRenderer, MeshRasterizer,
-    HardPhongShader, PointLights,
+    HardPhongShader, PointLights,HardFlatShader
 )
 from pytorch3d.structures import Meshes
-from pytorch3d.renderer import TexturesVertex
+from pytorch3d.renderer import TexturesVertex,blending
 
 from torch.utils.data import DataLoader
 
@@ -60,10 +60,11 @@ def GenPhongRenderer(image_size,blur_radius,faces_per_pixel,device):
             cameras=cameras, 
             raster_settings=raster_settings
         )
-
+    
+    b = blending.BlendParams(background_color=(0,0,0))
     phong_renderer = MeshRenderer(
         rasterizer=rasterizer,
-        shader=HardPhongShader(device=device, cameras=cameras, lights=lights)
+        shader=HardFlatShader(device=device, cameras=cameras, lights=lights,blend_params=b)
     )
 
     return phong_renderer
@@ -127,7 +128,7 @@ def generate_sphere_mesh(center,radius,device,color = [1,1,1]):
         faces=[faces_teeth],
         textures=textures).to(device)
     
-    return mesh,verts_teeth,faces_teeth,textures
+    return mesh,verts_teeth,faces_teeth,verts_rgb.squeeze(0)
 
 def GenDataSplitCSV(dir_data,csv_path,val_p,test_p):
     patient_dic = {}
@@ -222,15 +223,20 @@ def plot_fig(dic):
 
 
 def Generate_Mesh(verts,faces,text,lst_landmarks,device):
+    verts_rgb = torch.ones_like(text)[None].squeeze(0)  # (1, V, 3)
+    verts_rgb[:,:, 0] *= 1  # red
+    verts_rgb[:,:, 1] *= 0  # green
+    verts_rgb[:,:, 2] *= 0  # blue
+    text = verts_rgb
+
     for landmark in lst_landmarks:
         batch_verts = torch.empty((0)).to(device)
         batch_faces = torch.empty((0)).to(device)
         batch_text = torch.empty((0)).to(device)
-    
+        # print(text)
         for position in landmark:
-            mesh_l,verts_l,faces_l,text_l = generate_sphere_mesh(position,0.01,device)
-            tensor_text = torch.ones_like(verts_l).to(device)
-            batch_text = torch.cat((batch_text,tensor_text.unsqueeze(0).to(device)),dim=0)
+            mesh_l,verts_l,faces_l,text_l = generate_sphere_mesh(position,0.01,device,[0,1,0])
+            batch_text = torch.cat((batch_text,text_l.unsqueeze(0).to(device)),dim=0)
             batch_verts = torch.cat((batch_verts,verts_l.unsqueeze(0).to(device)),dim=0)
             batch_faces = torch.cat((batch_faces,faces_l.unsqueeze(0).to(device)),dim=0)
        
@@ -309,15 +315,22 @@ def Convert_RGB_to_grey(lst_images):
 
     return tens_images
 
-# def Convert_RGB_to_grey(lst_images):
-#     tens_images = torch.empty((0)).to(GV.DEVICE)
-#     for images in lst_images:
-#         images = images.to(GV.DEVICE)
-#         images = images.cpu()
-#         images = [transforms.ToPILImage()(x) for x in images]
-#         images = [transforms.Grayscale()(x) for x in images]
-#         images = [transforms.ToTensor()(x) for x in images]
-#         # images = torch.stack(images,dim=0).to(GV.DEVICE)
-#         tens_images = torch.cat((tens_images,images.unsqueeze(0).to(GV.DEVICE)),dim=0)
+def Gen_patch(V, RED, LP, label, radius):
+    tens_patch = RED
+    lst_landmarks = Get_lst_landmarks(LP,GV.LABEL[label])
+    for landmark_coord in lst_landmarks:
+        # print(landmark_coord)
+        landmark_coord =landmark_coord.unsqueeze(1)
+        print(landmark_coord.shape)
+        distance = torch.cdist(landmark_coord, V, p=2)
+        distance = distance.squeeze(1)
+        print(distance.shape)
+        # index_pos_land = torch.where(distance<radius,distance,torch.ones(distance.shape)*0)
+        index_pos_land = (distance<radius).nonzero(as_tuple=True)
+        print('index_pos_land',index_pos_land)
+        # print(RED[index_pos_land])
+        for i,index in enumerate(index_pos_land[0]):
+            # print(RED[index][index_pos_land[1][i]])
+            RED[index][index_pos_land[1][i]] = torch.tensor([0,1,0])
 
-#     return tens_images
+    return RED

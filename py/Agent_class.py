@@ -80,7 +80,7 @@ class Agent:
         return self.positions
 
     
-    def GetView(self,meshes):
+    def GetView(self,meshes,gray=False):
         spc = self.positions
         img_lst = torch.empty((0)).to(self.device)
 
@@ -97,6 +97,10 @@ class Agent:
             images = images.permute(0,3,1,2)
             images = images[:,:-1,:,:]
             
+            if gray:
+                print(images.shape)
+                images = Convert_RGB_to_grey(images)
+
             # print(images.shape)
             pix_to_face, zbuf, bary_coords, dists = self.renderer.rasterizer(meshes.clone())
             zbuf = zbuf.permute(0, 3, 1, 2)
