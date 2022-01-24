@@ -45,6 +45,7 @@ class Agent:
     def __init__(
         self,
         renderer, 
+        renderer2,
         target,
         device, 
         # label,
@@ -54,6 +55,7 @@ class Agent:
         ):
         super(Agent, self).__init__()
         self.renderer = renderer
+        self.renderer2=renderer2
         self.device = device
         self.target = target
         self.writer = SummaryWriter(os.path.join(save_folder,"Run_"+target))
@@ -80,7 +82,7 @@ class Agent:
         return self.positions
 
     
-    def GetView(self,meshes,gray=False):
+    def GetView(self,meshes,rend=False):
         spc = self.positions
         img_lst = torch.empty((0)).to(self.device)
 
@@ -93,29 +95,26 @@ class Agent:
             # print(R)
             T = -torch.bmm(R.transpose(1, 2), current_cam_pos[:, :, None])[:, :, 0]  # (1, 3)
 
-            images = self.renderer(meshes_world=meshes.clone(), R=R, T=T.to(self.device))
-            images = images.permute(0,3,1,2)
-            images = images[:,:-1,:,:]
-            
-            if gray:
-                print(images.shape)
-                images = Convert_RGB_to_grey(images)
+            if rend:
+                renderer = self.renderer2
+                images = renderer(meshes_world=meshes.clone(), R=R, T=T.to(self.device))
+                images = images.permute(0,3,1,2)
+                y = images[:,:-2,:,:]
+            else:
+                renderer = self.renderer
+                images = self.renderer(meshes_world=meshes.clone(), R=R, T=T.to(self.device))
+                images = images.permute(0,3,1,2)
+                images = images[:,:-1,:,:]
 
-            # print(images.shape)
-            pix_to_face, zbuf, bary_coords, dists = self.renderer.rasterizer(meshes.clone())
-            zbuf = zbuf.permute(0, 3, 1, 2)
-            # print(dists.shape)
-            y = torch.cat([images, zbuf], dim=1)
-            # print(y)
+                pix_to_face, zbuf, bary_coords, dists = self.renderer.rasterizer(meshes.clone())
+                zbuf = zbuf.permute(0, 3, 1, 2)
+                y = torch.cat([images, zbuf], dim=1)
 
             img_lst = torch.cat((img_lst,y.unsqueeze(0)),dim=0)
         img_batch =  img_lst.permute(1,0,2,3,4)
         
         return img_batch
 
-    def SetScale(self,scale):
-        self.scale = scale
-        self.radius = self.radius_lst[scale]
 
 
 def PlotAgentViews(view):

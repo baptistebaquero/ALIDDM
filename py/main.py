@@ -9,15 +9,16 @@ from Agent_class import *
 from pytorch3d.structures import Meshes
 from pytorch3d.renderer import TexturesVertex
 from torch.utils.tensorboard import SummaryWriter
-from training import Model,Training
+from training import Model,Training,Validation
 from monai.metrics import DiceMetric
 # from pytorchtools import EarlyStopping
+from monai.transforms import AsDiscrete
 
 def main(args):
     
     #GEN CSV
     # GenDataSplitCSV(args.dir_patients,args.csv_file,args.val_percentage,args.test_percentage)
-    phong_renderer = GenPhongRenderer(args.image_size,args.blur_radius,args.faces_per_pixel,GV.DEVICE)
+    phong_renderer,mask_renderer = GenPhongRenderer(args.image_size,args.blur_radius,args.faces_per_pixel,GV.DEVICE)
 
     GV.SELECTED_JAW = args.jaw
 
@@ -35,53 +36,59 @@ def main(args):
 
     agent = Agent(
         renderer=phong_renderer,
+        renderer2=mask_renderer,
         target=target,
         device=GV.DEVICE,
         save_folder=args.dir_data,
         radius=args.sphere_radius,
     )
 
-    model = Model(GV.DEVICE)
+    model = Model()
+    num_classes = 2 
 
     loss_function = monai.losses.DiceCELoss(to_onehot_y=True,softmax=True)
     optimizer = torch.optim.Adam(model.parameters(), args.learning_rate)
-    dice_metric = DiceMetric(include_background=True, reduction="mean", get_not_nans=False)
+    dice_metric = DiceMetric(include_background=False, reduction="mean", get_not_nans=False)
+    post_true = AsDiscrete(to_onehot=True, num_classes=num_classes)
+    post_pred = AsDiscrete(argmax=True, to_onehot=True, num_classes=num_classes)
+    metric_values = list()
+    nb_val = 0
+    write_image_interval = 1
 
     best_metric = -1
     writer = SummaryWriter()
     # early_stopping=EarlyStopping(patience=20, verbose=True, path=args.out)
-    # early_stopping = EarlyStopping(patience=20, verbose=True)
     
-    # for epoch in range(args.max_epoch):
-    #     print('-------- TRAINING --------')          
-    #     Training(
-    #         train_dataloader=train_dataloader,
-    #         train_data=train_data,
-    #         agent=agent,
-    #         epoch=epoch,
-    #         nb_epoch=args.max_epoch,
-    #         model=model,
-    #         optimizer=optimizer,
-    #         loss_function=loss_function,
-    #         label=args.label,
-    #         writer=writer,
-    #         device=GV.DEVICE
-    #     )
+    for epoch in range(args.max_epoch):
+        Training(
+            train_dataloader=train_dataloader,
+            train_data=train_data,
+            agent=agent,
+            epoch=epoch,
+            nb_epoch=args.max_epoch,
+            model=model,
+            optimizer=optimizer,
+            loss_function=loss_function,
+            label=args.label,
+            writer=writer
+            )
 
-        # if (epoch) % args.val_freq == 0:
-        #     print('-------- VALIDATION --------')
-        #     print('---------- epoch :', epoch,'----------')
-        #     Validation(
-        #         val_dataloader=val_dataloader,
-        #         epoch= epoch,
-        #         model=model,
-        #         agent=agent,
-        #         label=args.label,
-        #         dice_metric=dice_metric,
-        #         best_metric=best_metric,
-        #         early_stopping=early_stopping,
-        #         writer=writer
-        #     )
+        if (epoch) % args.val_freq == 0:        
+            Validation(
+                val_dataloader=val_dataloader,
+                epoch= epoch,
+                model=model,
+                agent=agent,
+                label=args.label,
+                dice_metric=dice_metric,
+                best_metric=best_metric,
+                nb_val = nb_val,
+                writer=writer,
+                write_image_interval=write_image_interval,
+                post_true=post_true,
+                post_pred=post_pred,
+                metric_values=metric_values
+            )
             
         #     if early_stopping.early_stop == True :
         #         print('-------- ACCURACY --------')
@@ -98,17 +105,17 @@ def main(args):
 
 
 
-    for batch, (V, F, RI, CN, LP, MR, SF) in enumerate(train_dataloader):
-        # print(V.shape)
-        # print(CN.shape)
-        position_agent = agent.position_agent(RI,V,args.label,GV.DEVICE)
+    # for batch, (V, F, RI, CN, LP, MR, SF) in enumerate(train_dataloader):
+    #     # print(V.shape)
+    #     # print(CN.shape)
+    #     position_agent = agent.position_agent(RI,V,args.label,GV.DEVICE)
 
-        verts_rgb = torch.ones_like(CN)[None].squeeze(0)  # (1, V, 3)
-        verts_rgb[:,:, 0] *= 1  # red
-        verts_rgb[:,:, 1] *= 0  # green
-        verts_rgb[:,:, 2] *= 0  # blue
-        CN = verts_rgb
-        patch_region = Gen_patch(V, CN, LP, args.label, 0.02)
+    #     verts_rgb = torch.ones_like(CN)[None].squeeze(0)  # (1, V, 3)
+    #     verts_rgb[:,:, 0] *= 1  # red
+    #     verts_rgb[:,:, 1] *= 0  # green
+    #     verts_rgb[:,:, 2] *= 0  # blue
+    #     CN = verts_rgb
+    #     patch_region = Gen_patch(V, CN, LP, args.label, 0.02)
         # meshes = Generate_Mesh(V,F,patch_region,lst_landmarks,GV.DEVICE)
       
 
@@ -116,20 +123,21 @@ def main(args):
 
 
         # print(patch_region.shape)
-        textures = TexturesVertex(verts_features=patch_region)
-        meshes = Meshes(
-            verts=V,   
-            faces=F, 
-            textures=textures
-        ).to(GV.DEVICE) # batchsize
+        # textures = TexturesVertex(verts_features=patch_region)
+        # meshes = Meshes(
+        #     verts=V,   
+        #     faces=F, 
+        #     textures=textures
+        # ).to(GV.DEVICE) # batchsize
         
-        dic = {"teeth_landmarks_meshes": meshes}
-        plot_fig(dic)
+        # dic = {"teeth_landmarks_meshes": meshes}
+        # plot_fig(dic)
         # position_agent = agent.position_agent(RI,V,args.label,GV.DEVICE)
         # PlotMeshAndSpheres(meshes,position_agent,0.02,[1,1,1])       
 
-        img_batch =  agent.GetView(meshes)
-        PlotAgentViews(img_batch.cpu())
+        # img_batch =  agent.GetView(meshes)
+        # print(img_batch.shape)
+        # PlotAgentViews(img_batch.cpu())
 
 
         # lst_landmarks = Get_lst_landmarks(LP,GV.LABEL[args.label])
@@ -176,7 +184,7 @@ if __name__ == '__main__':
     input_param.add_argument('--label', type=str, help='label of the teeth',default="18")
    
     #Training data
-    input_param.add_argument('--image_size',type=int, help='size of the picture', default=224)
+    input_param.add_argument('--image_size',type=int, help='size of the picture', default=10)
     input_param.add_argument('--blur_radius',type=int, help='blur raius', default=0)
     input_param.add_argument('--faces_per_pixel',type=int, help='faces per pixels', default=1)
     

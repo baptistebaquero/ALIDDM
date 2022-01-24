@@ -16,9 +16,8 @@ from utils import(
 ) 
 from pytorch3d.renderer import (
     FoVPerspectiveCameras,
-    FoVOrthographicCameras,
     RasterizationSettings, MeshRenderer, MeshRasterizer,
-    HardPhongShader, PointLights,HardFlatShader
+    HardPhongShader, PointLights,
 )
 from pytorch3d.structures import Meshes
 from pytorch3d.renderer import TexturesVertex,blending
@@ -65,10 +64,13 @@ def GenPhongRenderer(image_size,blur_radius,faces_per_pixel,device):
     b = blending.BlendParams(background_color=(0,0,0))
     phong_renderer = MeshRenderer(
         rasterizer=rasterizer,
-        shader=MyShader(device=device, cameras=cameras, lights=lights,blend_params=b)
+        shader=HardPhongShader(device=device, cameras=cameras, lights=lights,blend_params=b)
     )
-
-    return phong_renderer
+    mask_renderer = MeshRenderer(
+        rasterizer=rasterizer,
+        shader=MaskRenderer(device=device, cameras=cameras, lights=lights,blend_params=b)
+    )
+    return phong_renderer,mask_renderer
     
 
 def GenDataSet(df,dir_patients,flyBy,device):
@@ -333,5 +335,5 @@ def Gen_patch(V, RED, LP, label, radius):
         for i,index in enumerate(index_pos_land[0]):
             # print(RED[index][index_pos_land[1][i]])
             RED[index][index_pos_land[1][i]] = torch.tensor([0,1,0])
-
+            
     return RED
