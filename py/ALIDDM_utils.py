@@ -31,6 +31,7 @@ from monai.transforms import (
 )
 import monai
 import torchvision.transforms as transforms
+from shader import *
 
 def GetLandmarkPosFromLP(lm_pos,target):
     lst_lm =  GV.LANDMARKS[GV.SELECTED_JAW]
@@ -64,7 +65,7 @@ def GenPhongRenderer(image_size,blur_radius,faces_per_pixel,device):
     b = blending.BlendParams(background_color=(0,0,0))
     phong_renderer = MeshRenderer(
         rasterizer=rasterizer,
-        shader=HardFlatShader(device=device, cameras=cameras, lights=lights,blend_params=b)
+        shader=MyShader(device=device, cameras=cameras, lights=lights,blend_params=b)
     )
 
     return phong_renderer
