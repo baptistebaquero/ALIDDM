@@ -54,6 +54,7 @@ def main(args):
     metric_values = list()
     nb_val = 0
     write_image_interval = 1
+    nb_channel=2
 
     best_metric = -1
     writer = SummaryWriter()
@@ -77,6 +78,7 @@ def main(args):
             Validation(
                 val_dataloader=val_dataloader,
                 epoch= epoch,
+                nb_epoch=args.max_epoch,
                 model=model,
                 agent=agent,
                 label=args.label,
@@ -87,9 +89,10 @@ def main(args):
                 write_image_interval=write_image_interval,
                 post_true=post_true,
                 post_pred=post_pred,
-                metric_values=metric_values
+                metric_values=metric_values,
+                nb_channel=nb_channel
             )
-            
+
         #     if early_stopping.early_stop == True :
         #         print('-------- ACCURACY --------')
         #         Accuracy(agents=agents,
