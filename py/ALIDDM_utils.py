@@ -321,7 +321,7 @@ def Gen_patch(V, RED, LP, label, radius):
     lst_landmarks = Get_lst_landmarks(LP,GV.LABEL[label])
     for landmark_coord in lst_landmarks:
         # print(landmark_coord)
-        landmark_coord =landmark_coord.unsqueeze(1)
+        landmark_coord =landmark_coord.unsqueeze(1).to(GV.DEVICE)
         print(landmark_coord.shape)
         distance = torch.cdist(landmark_coord, V, p=2)
         distance = distance.squeeze(1)

@@ -128,8 +128,8 @@ def main(args):
         # position_agent = agent.position_agent(RI,V,args.label,GV.DEVICE)
         # PlotMeshAndSpheres(meshes,position_agent,0.02,[1,1,1])       
 
-    #     img_batch =  agent.GetView(meshes)
-    #     PlotAgentViews(img_batch.cpu())
+        img_batch =  agent.GetView(meshes)
+        PlotAgentViews(img_batch.cpu())
 
 
         # lst_landmarks = Get_lst_landmarks(LP,GV.LABEL[args.label])
@@ -176,7 +176,7 @@ if __name__ == '__main__':
     input_param.add_argument('--label', type=str, help='label of the teeth',default="18")
    
     #Training data
-    input_param.add_argument('--image_size',type=int, help='size of the picture', default=10)
+    input_param.add_argument('--image_size',type=int, help='size of the picture', default=224)
     input_param.add_argument('--blur_radius',type=int, help='blur raius', default=0)
     input_param.add_argument('--faces_per_pixel',type=int, help='faces per pixels', default=1)
     
