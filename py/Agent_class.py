@@ -1,3 +1,4 @@
+from operator import itemgetter
 import GlobVar as GV
 from utils import *
 from ALIDDM_utils import *
@@ -37,7 +38,8 @@ for pid in range(icosahedron.GetNumberOfPoints()):
     spoint = icosahedron.GetPoint(pid)
     sphere_points.append([point for point in spoint])
 
-CAMERA_POSITION = np.array(sphere_points[:2])
+got = itemgetter(0,4)(sphere_points)
+CAMERA_POSITION = np.array(got)
 # CAMERA_POSITION = np.array(sphere_points)
 
 
@@ -85,6 +87,7 @@ class Agent:
     def GetView(self,meshes,rend=False):
         spc = self.positions
         img_lst = torch.empty((0)).to(self.device)
+        seuil = 0.5
 
         for sp in self.camera_points:
             sp_i = sp*self.radius
@@ -98,8 +101,16 @@ class Agent:
             if rend:
                 renderer = self.renderer2
                 images = renderer(meshes_world=meshes.clone(), R=R, T=T.to(self.device))
-                images = images.permute(0,3,1,2)
-                y = images[:,:-2,:,:]
+                y = images[:,:,:,:-2]
+                # print(y.shape)
+                yr = torch.where(y[:,:,:,0]<=seuil,0.,0.).unsqueeze(-1)
+                yg = torch.where(y[:,:,:,1]>seuil,1.,0.).unsqueeze(-1)
+                # y = torch.cat((yr,yg),dim=-1)
+                y = (yr + yg).to(torch.float32)
+                # print(y.shape)
+
+                y = y.permute(0,3,1,2)
+              
             else:
                 renderer = self.renderer
                 images = self.renderer(meshes_world=meshes.clone(), R=R, T=T.to(self.device))
@@ -114,7 +125,30 @@ class Agent:
         img_batch =  img_lst.permute(1,0,2,3,4)
         
         return img_batch
+    
+    def get_view_rasterize(self,meshes,rend=False):
+        spc = self.positions
+        img_lst = torch.empty((0)).to(self.device)
+        tens_pix_to_face = torch.empty((0)).to(self.device)
 
+        for sp in self.camera_points:
+            sp_i = sp*self.radius
+            current_cam_pos = spc + sp_i
+            R = look_at_rotation(current_cam_pos, at=spc, device=self.device)  # (1, 3, 3)
+            T = -torch.bmm(R.transpose(1, 2), current_cam_pos[:, :, None])[:, :, 0]  # (1, 3)
+              
+            renderer = self.renderer
+            images = renderer(meshes_world=meshes.clone(), R=R, T=T.to(self.device))
+            images = images.permute(0,3,1,2)
+            images = images[:,:-1,:,:]
+
+            pix_to_face, zbuf, bary_coords, dists = renderer.rasterizer(meshes.clone())
+            
+            img_lst = torch.cat((img_lst,images.unsqueeze(0)),dim=0)
+            tens_pix_to_face = torch.cat((tens_pix_to_face,pix_to_face.unsqueeze(0)),dim=0)
+        img_batch =  img_lst.permute(1,0,2,3,4)
+    
+        return img_batch , tens_pix_to_face       
 
 
 def PlotAgentViews(view):

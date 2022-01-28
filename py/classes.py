@@ -27,7 +27,7 @@ import vtk
 class FlyByDataset(Dataset):
     def __init__(self, df, device, dataset_dir='', rotate=False):
         self.df = df
-        self.device = GV.DEVICE
+        self.device = device
         self.dataset_dir = dataset_dir
         self.rotate = rotate
     def set_env_params(self, params):

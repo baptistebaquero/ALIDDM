@@ -1,5 +1,6 @@
 import argparse
 import datetime
+from unittest.mock import patch
 from ALIDDM_utils import *
 from classes import *
 import pandas as pd
@@ -10,6 +11,8 @@ from pytorch3d.structures import Meshes
 from pytorch3d.renderer import TexturesVertex
 from torch.utils.tensorboard import SummaryWriter
 from training import Model,Training,Validation
+from monai.losses import DiceCELoss
+from torch.optim import Adam
 from monai.metrics import DiceMetric
 # from pytorchtools import EarlyStopping
 from monai.transforms import AsDiscrete
@@ -30,9 +33,7 @@ def main(args):
     train_dataloader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True, collate_fn=pad_verts_faces)
     val_dataloader = DataLoader(val_data, batch_size=args.batch_size, shuffle=True, collate_fn=pad_verts_faces)
 
-    # loss_function = torch.nn.MSELoss(size_average=None, reduce=None, reduction='mean')
-
-    target = GV.LANDMARKS[GV.SELECTED_JAW][1]
+    target = GV.LABEL[args.label]
 
     agent = Agent(
         renderer=phong_renderer,
@@ -43,18 +44,17 @@ def main(args):
         radius=args.sphere_radius,
     )
 
-    model = Model()
-    num_classes = 2 
+    num_classes = args.num_classes
+    model = Model(4,num_classes)
 
-    loss_function = monai.losses.DiceCELoss(to_onehot_y=True,softmax=True)
-    optimizer = torch.optim.Adam(model.parameters(), args.learning_rate)
+    loss_function = DiceCELoss(to_onehot_y=True,softmax=True)
+    optimizer = Adam(model.parameters(), args.learning_rate)
     dice_metric = DiceMetric(include_background=False, reduction="mean", get_not_nans=False)
     post_true = AsDiscrete(to_onehot=True, num_classes=num_classes)
-    post_pred = AsDiscrete(argmax=True, to_onehot=True, num_classes=num_classes)
+    post_pred = AsDiscrete(argmax=True, to_onehot=False, num_classes=num_classes)
     metric_values = list()
     nb_val = 0
     write_image_interval = 1
-    nb_channel=2
 
     best_metric = -1
     writer = SummaryWriter()
@@ -90,25 +90,14 @@ def main(args):
                 post_true=post_true,
                 post_pred=post_pred,
                 metric_values=metric_values,
-                nb_channel=nb_channel
+                nb_channel=num_classes
             )
-
-        #     if early_stopping.early_stop == True :
-        #         print('-------- ACCURACY --------')
-        #         Accuracy(agents=agents,
-        #                 test_dataloader=test_dataloader,
-        #                 agents_ids=agents_ids,
-        #                 min_variance = args.min_variance,
-        #                 loss_function=loss_function,
-        #                 device=device
-        #                 )
-
-        #         break
 
 
 
 
     # for batch, (V, F, RI, CN, LP, MR, SF) in enumerate(train_dataloader):
+    #     print(LP)
     #     # print(V.shape)
     #     # print(CN.shape)
     #     position_agent = agent.position_agent(RI,V,args.label,GV.DEVICE)
@@ -119,7 +108,8 @@ def main(args):
     #     verts_rgb[:,:, 2] *= 0  # blue
     #     CN = verts_rgb
     #     patch_region = Gen_patch(V, CN, LP, args.label, 0.02)
-        # meshes = Generate_Mesh(V,F,patch_region,lst_landmarks,GV.DEVICE)
+    #     print(patch_region,patch_region.shape)
+    #     meshes = Generate_Mesh(V,F,patch_region,lst_landmarks,GV.DEVICE)
       
 
 
@@ -187,16 +177,18 @@ if __name__ == '__main__':
     input_param.add_argument('--label', type=str, help='label of the teeth',default="18")
    
     #Training data
-    input_param.add_argument('--image_size',type=int, help='size of the picture', default=10)
+    input_param.add_argument('--image_size',type=int, help='size of the picture', default=224)
     input_param.add_argument('--blur_radius',type=int, help='blur raius', default=0)
     input_param.add_argument('--faces_per_pixel',type=int, help='faces per pixels', default=1)
     
-    input_param.add_argument('-bs', '--batch_size', type=int, help='Batch size', default=2)
+    input_param.add_argument('-bs', '--batch_size', type=int, help='Batch size', default=7)
+    input_param.add_argument('-nc', '--num_classes', type=int, help='number of classes', default=2)
+
     # input_param.add_argument('-ds', '--data_size', type=int, help='Data size', default=100)
 
     # input_param.add_argument('-ds', '--data_size', type=int, help='Size of the dataset', default=4)
     #Training param
-    input_param.add_argument('-me', '--max_epoch', type=int, help='Number of training epocs', default=1)
+    input_param.add_argument('-me', '--max_epoch', type=int, help='Number of training epocs', default=100)
     input_param.add_argument('-vf', '--val_freq', type=int, help='Validation frequency', default=1)
     input_param.add_argument('-vp', '--val_percentage', type=int, help='Percentage of data to keep for validation', default=10)
     input_param.add_argument('-tp', '--test_percentage', type=int, help='Percentage of data to keep for test', default=20)

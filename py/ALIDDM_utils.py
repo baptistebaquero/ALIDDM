@@ -46,7 +46,7 @@ def GenPhongRenderer(image_size,blur_radius,faces_per_pixel,device):
     
     # cameras = FoVOrthographicCameras(znear=0.1,zfar = 10,device=device) # Initialize a ortho camera.
 
-    cameras = FoVPerspectiveCameras(znear=0.01,zfar = 10, fov= 90,device=device) # Initialize a perspective camera.
+    cameras = FoVPerspectiveCameras(znear=0.01,zfar = 10, fov= 90, device=device) # Initialize a perspective camera.
 
     raster_settings = RasterizationSettings(        
         image_size=image_size, 
@@ -87,7 +87,7 @@ def GenDataSet(df,dir_patients,flyBy,device):
         df = df_train,
         device=device,
         dataset_dir=dir_patients,
-        rotate=True
+        rotate=False
         )
 
     val_data = flyBy(
@@ -209,7 +209,7 @@ def PlotMeshAndSpheres(meshes,sphere_pos,radius,col):
     "teeth_mesh": meshes,
     }
     for id,pos in enumerate(sphere_pos):
-        print(pos)
+        # print(pos)
         mesh,verts_teeth,faces_teeth,textures = generate_sphere_mesh(pos,radius,GV.DEVICE,col)
         dic[str(id)] = mesh
     # print(dic)
@@ -308,7 +308,7 @@ def Convert_RGB_to_grey(lst_images):
         image = transforms.ToPILImage()(image)
         image = transforms.Grayscale(num_output_channels=1)(image)
         image = transforms.ToTensor()(image)
-        print(image[0])
+        # print(image[0])
         for row in image[0]:
             for pix in row:
                 new_pix = torch.nn.Threshold(pix>0.5, 1)
@@ -324,16 +324,61 @@ def Gen_patch(V, RED, LP, label, radius):
     for landmark_coord in lst_landmarks:
         # print(landmark_coord)
         landmark_coord =landmark_coord.unsqueeze(1).to(GV.DEVICE)
-        print(landmark_coord.shape)
+        # print(landmark_coord.shape)
         distance = torch.cdist(landmark_coord, V, p=2)
         distance = distance.squeeze(1)
-        print(distance.shape)
+        # print(distance.shape)
         # index_pos_land = torch.where(distance<radius,distance,torch.ones(distance.shape)*0)
         index_pos_land = (distance<radius).nonzero(as_tuple=True)
-        print('index_pos_land',index_pos_land)
+        # print('index_pos_land',index_pos_land)
         # print(RED[index_pos_land])
         for i,index in enumerate(index_pos_land[0]):
             # print(RED[index][index_pos_land[1][i]])
             RED[index][index_pos_land[1][i]] = torch.tensor([0,1,0])
-            
+              
     return RED
+
+def Gen_one_patch(V, RED, radius, coord):
+    landmark_coord = coord.unsqueeze(0).to(GV.DEVICE)
+    distance = torch.cdist(landmark_coord, V, p=2)
+    distance = distance.squeeze(1)
+    # print(distance.shape)
+    # index_pos_land = torch.where(distance<radius,distance,torch.ones(distance.shape)*0)
+    index_pos_land = (distance<radius).nonzero(as_tuple=True)
+    # print('index_pos_land',index_pos_land)
+    # print(RED[index_pos_land])
+    for i,index in enumerate(index_pos_land[0]):
+        # print(RED[index][index_pos_land[1][i]])
+        RED[index][index_pos_land[1][i]] = torch.tensor([0,1,0])
+              
+    return RED
+
+def Gen_mesh_patch(V,F,CN,LP,label):
+    verts_rgb = torch.ones_like(CN)[None].squeeze(0)  # (1, V, 3)
+    verts_rgb[:,:, 0] *= 1  # red
+    verts_rgb[:,:, 1] *= 0  # green
+    verts_rgb[:,:, 2] *= 0  # blue
+    patch_region = Gen_patch(V, verts_rgb, LP, label, 0.02)
+    textures = TexturesVertex(verts_features=patch_region)
+    meshes = Meshes(
+        verts=V,   
+        faces=F, 
+        textures=textures
+    ).to(GV.DEVICE) # batchsize
+    
+    return meshes
+
+def Gen_mesh_one_patch(V,F,CN,coord):
+    verts_rgb = torch.ones_like(CN)[None].squeeze(0)  # (1, V, 3)
+    verts_rgb[:,:, 0] *= 1  # red
+    verts_rgb[:,:, 1] *= 0  # green
+    verts_rgb[:,:, 2] *= 0  # blue
+    patch_region = Gen_one_patch(V, verts_rgb, 0.02,coord)
+    textures = TexturesVertex(verts_features=patch_region)
+    meshes = Meshes(
+        verts=V,   
+        faces=F, 
+        textures=textures
+    ).to(GV.DEVICE) # batchsize
+    
+    return meshes

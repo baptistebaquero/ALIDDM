@@ -3,15 +3,14 @@ from Agent_class import *
 from ALIDDM_utils import *
 from monai.data import decollate_batch
 
-def Model():
+def Model(in_channels,out_channels):
     
     net = UNet(
         spatial_dims=2,
-        in_channels=4,
-        out_channels=2,
+        in_channels=in_channels,
+        out_channels=out_channels,
         channels=(16, 32, 64, 128, 256),
         strides=(2, 2, 2, 2),
-        # num_res_units=2,
     ).to(GV.DEVICE)
 
     return net
@@ -35,20 +34,17 @@ def Training(train_dataloader,train_data,agent,epoch,nb_epoch,model,optimizer,lo
         agent.position_agent(RI,V,label,GV.DEVICE)
 
         images =  agent.GetView(meshes) #[batch,num_ima,channels,size,size]
-        PlotAgentViews(images.detach().unsqueeze(0).cpu())
         
-        lst_landmarks = Get_lst_landmarks(LP,GV.LABEL[label])
-        patch_region = Gen_patch(V, CN, LP, label, 0.02)
-        meshes_2 = Generate_Mesh(V,F,patch_region,lst_landmarks,GV.DEVICE)
-        # meshes_2 = Generate_land_Mesh(lst_landmarks,GV.DEVICE)
+        meshes_2 = Gen_mesh_patch(V,F,CN,LP,label)
+     
         land_images =  agent.GetView(meshes_2,rend=True) #[batch,num_ima,channels,size,size]
-        PlotAgentViews(land_images.detach().unsqueeze(0).cpu())
+        # PlotAgentViews(land_images.detach().unsqueeze(0).cpu())
 
         inputs = torch.empty((0)).to(GV.DEVICE)
         y_true = torch.empty((0)).to(GV.DEVICE)
         for i,batch in enumerate(images):
             inputs = torch.cat((inputs,batch.to(GV.DEVICE)),dim=0) #[num_im*batch,channels,size,size]
-            y_true = torch.cat((y_true,land_images[i].to(GV.DEVICE)),dim=0) #[num_im*batch,channels,size,size]
+            y_true = torch.cat((y_true,land_images[i].to(GV.DEVICE)),dim=0) #[num_im*batch,channels,size,size] channels=1
   
         inputs = inputs.to(dtype=torch.float32)
         y_true = y_true.to(dtype=torch.float32)
@@ -88,10 +84,10 @@ def Validation(val_dataloader,epoch,nb_epoch,model,agent,label,dice_metric,best_
 
             images =  agent.GetView(meshes)
             
-            lst_landmarks = Get_lst_landmarks(LP,GV.LABEL[label])
-            patch_region = Gen_patch(V, CN, LP, label, 0.02)
-            meshes_2 = Generate_Mesh(V,F,patch_region,lst_landmarks,GV.DEVICE)
-            land_images =  agent.GetView(meshes_2) 
+            # lst_landmarks = Get_lst_landmarks(LP,GV.LABEL[label])
+            meshes_2 = Gen_mesh_patch(V,F,CN,LP,label)
+
+            land_images =  agent.GetView(meshes_2,rend=True) 
             
             inputs = torch.empty((0)).to(GV.DEVICE)
             y_true = torch.empty((0)).to(GV.DEVICE)
@@ -114,7 +110,8 @@ def Validation(val_dataloader,epoch,nb_epoch,model,agent,label,dice_metric,best_
             val_true_outputs_convert = [
                 post_true(val_true_outputs_tensor) for val_true_outputs_tensor in val_true_outputs_list
             ]
-
+            print(val_pred_outputs_convert.shape)
+            print(val_true_outputs_convert.shape)
             dice_metric(y_pred=val_pred_outputs_convert, y=val_true_outputs_convert)
 
         metric = dice_metric.aggregate().item()
@@ -129,20 +126,19 @@ def Validation(val_dataloader,epoch,nb_epoch,model,agent,label,dice_metric,best_
         print("current epoch: {} current mean dice: {:.4f} best mean dice: {:.4f} at epoch {}".format(epoch + 1, metric, best_metric, best_metric_epoch))
 
         writer.add_scalar("validation_mean_dice", metric, epoch + 1)
-
-        imgs_output = torch.argmax(outputs_pred, dim=1).detach().cpu()
-        imgs_output = imgs_output.unsqueeze(1)  # insert dim of size 1 at pos. 1
+      
+        # imgs_true = torch.cat((y_true,torch.zeros(y_true[:,1,:,:].unsqueeze(1).shape).to(GV.DEVICE)),dim=1)
+        # imgs_out = torch.cat((outputs_pred,torch.zeros(outputs_pred[:,1,:,:].unsqueeze(1).shape).to(GV.DEVICE)),dim=1)
+        
         inputs = inputs[:,:-1,:,:]
-        input_rgb = torch.cat((255*(1-2*inputs/nb_channel),255*(2*inputs/nb_channel-1),inputs),dim=1) 
-        out_rgb = torch.cat((255*(1-2*imgs_output/nb_channel),255*(2*imgs_output/nb_channel-1),imgs_output),dim=1) 
-        true_rgb = torch.cat((255*(1-2*y_true/nb_channel),255*(2*y_true/nb_channel-1),y_true),dim=1) 
-
-        input_rgb[:,2,...] = 255 - input_rgb[:,1,...] - input_rgb[:,0,...]
-        out_rgb[:,2,...] = 255 - out_rgb[:,1,...] - out_rgb[:,0,...]
-        true_rgb[:,2,...] = 255 - true_rgb[:,1,...] - true_rgb[:,0,...]
+        val_pred = torch.empty((0)).to(GV.DEVICE)
+        for image in outputs_pred:
+            val_pred = torch.cat((val_pred,post_pred(image).unsqueeze(0).to(GV.DEVICE)),dim=0)
 
         if nb_val %  write_image_interval == 0:       
-            writer.add_images("labels",input_rgb,epoch)
-            writer.add_images("output",out_rgb,epoch)
-            writer.add_images("output",true_rgb,epoch)
+            writer.add_images("input",inputs,epoch)
+            writer.add_images("true",y_true,epoch)
+            writer.add_images("output",outputs_pred,epoch)
+            
+    writer.close()
             

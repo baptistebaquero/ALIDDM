@@ -23,14 +23,6 @@ LANDMARKS = {
 global SELECTED_JAW
 SELECTED_JAW = "L"
 
-# MOVEMENT_MATRIX_6 = torch.tensor([
-#     [1,0,0],  # MoveLeft
-#     [-1,0,0], # MoveRight
-#     [0,1,0],  # MoveBack
-#     [0,-1,0], # MoveFront
-#     [0,0,1],  # MoveUp
-#     [0,0,-1], # MoveDown
-# ])
 
 LABEL = {
     "15" : LANDMARKS["U"][0:3],
