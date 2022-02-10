@@ -10,6 +10,8 @@ import torch
 
 import GlobVar as GV
 from GlobVar import SELECTED_JAW
+from utils import ReadSurf
+from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
 
 from utils import(
     PolyDataToTensors
@@ -73,12 +75,15 @@ def GenPhongRenderer(image_size,blur_radius,faces_per_pixel,device):
     return phong_renderer,mask_renderer
     
 
-def GenDataSet(df,dir_patients,flyBy,device):
+def GenDataSet(df,dir_patients,flyBy,device,label):
     SELECTED_JAW = GV.SELECTED_JAW
     df_train = df.loc[df['for'] == "train"]
     df_train = df_train.loc[df_train['jaw'] == SELECTED_JAW]
     df_val = df.loc[df['for'] == "val"]
     df_val = df_val.loc[df_val['jaw'] == SELECTED_JAW]
+    df_train = df_train.loc[df_train[label] == 1]
+    df_val = df_val.loc[df_val[label] == 1]
+
     # print(df.loc[df['for'] == "test"])
 
     # print(df_train)
@@ -168,6 +173,8 @@ def GenDataSplitCSV(dir_data,csv_path,val_p,test_p):
         }
 
     fieldnames = ['for','jaw','surf', 'landmarks']
+    for lab in range(2,32):
+        fieldnames.append(str(lab))
     data_list = []
     for type,dic in data_dic.items():
         for patient in dic:
@@ -178,6 +185,20 @@ def GenDataSplitCSV(dir_data,csv_path,val_p,test_p):
                     'surf':data["surf"].replace(dir_data,"")[1:],
                     'landmarks':data["lm"].replace(dir_data,"")[1:],
                     }
+                print(data["surf"])
+                read_surf = ReadSurf(data["surf"])
+                ids = ToTensor(dtype=torch.int64, device=GV.DEVICE)(vtk_to_numpy(read_surf.GetPointData().GetScalars("PredictedID")))
+                print(ids)
+
+                for label in range(2,32):
+                    
+                    if label in ids:
+                        present = 1
+                    else:
+                        present = 0
+                    
+                    rows[str(label)] = present
+
                 data_list.append(rows)
     
     with open(csv_path, 'w', encoding='UTF8', newline='') as f:
@@ -319,23 +340,18 @@ def Convert_RGB_to_grey(lst_images):
     return tens_images
 
 def Gen_patch(V, RED, LP, label, radius):
-    tens_patch = RED
     lst_landmarks = Get_lst_landmarks(LP,GV.LABEL[label])
+    color_index=0
     for landmark_coord in lst_landmarks:
-        # print(landmark_coord)
         landmark_coord =landmark_coord.unsqueeze(1).to(GV.DEVICE)
-        # print(landmark_coord.shape)
         distance = torch.cdist(landmark_coord, V, p=2)
         distance = distance.squeeze(1)
-        # print(distance.shape)
-        # index_pos_land = torch.where(distance<radius,distance,torch.ones(distance.shape)*0)
         index_pos_land = (distance<radius).nonzero(as_tuple=True)
-        # print('index_pos_land',index_pos_land)
-        # print(RED[index_pos_land])
+        color = [torch.tensor([1,0,0]),torch.tensor([0,1,0]),torch.tensor([0,0,1])]
         for i,index in enumerate(index_pos_land[0]):
-            # print(RED[index][index_pos_land[1][i]])
-            RED[index][index_pos_land[1][i]] = torch.tensor([0,1,0])
-              
+            RED[index][index_pos_land[1][i]] = color[color_index]
+        color_index +=1 
+
     return RED
 
 def Gen_one_patch(V, RED, radius, coord):
@@ -355,7 +371,7 @@ def Gen_one_patch(V, RED, radius, coord):
 
 def Gen_mesh_patch(V,F,CN,LP,label):
     verts_rgb = torch.ones_like(CN)[None].squeeze(0)  # (1, V, 3)
-    verts_rgb[:,:, 0] *= 1  # red
+    verts_rgb[:,:, 0] *= 0  # red
     verts_rgb[:,:, 1] *= 0  # green
     verts_rgb[:,:, 2] *= 0  # blue
     patch_region = Gen_patch(V, verts_rgb, LP, label, 0.02)

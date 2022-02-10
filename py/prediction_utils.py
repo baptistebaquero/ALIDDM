@@ -1,7 +1,13 @@
 import json
+from posixpath import basename
+import seaborn as sns
+import matplotlib.pyplot as plt
+import os 
+import numpy as np
+import glob
 
 def Upscale(landmark_pos,mean_arr,scale_factor):
-    new_pos_center = (landmark_pos/scale_factor) + mean_arr
+    new_pos_center = (landmark_pos.cpu()/scale_factor) + mean_arr
     return new_pos_center
 
 def GenControlePoint(groupe_data):
@@ -74,3 +80,94 @@ def WriteJson(lm_lst,out_path):
         json.dump(file, f, ensure_ascii=False, indent=4)
 
     f.close
+
+def ReadJson(fiducial_path):
+    lm_dic = {}
+    with open(fiducial_path) as f:
+            data = json.load(f)
+    markups = data["markups"][0]["controlPoints"]
+    for markup in markups:
+        lm_dic[markup["label"]] = {"x":markup["position"][0],"y":markup["position"][1],"z":markup["position"][2]}
+    return lm_dic
+
+def ResultAccuracy(fiducial_dir):
+
+    error_dic = {"labels":[], "error":[]}
+    patients = {}
+    normpath = os.path.normpath("/".join([fiducial_dir, '**', '']))
+    for img_fn in sorted(glob.iglob(normpath, recursive=True)):
+        if os.path.isfile(img_fn) and ".json" in img_fn:
+            baseName = os.path.basename(img_fn)
+            patient = os.path.dirname(os.path.dirname(img_fn))
+            num_label_pred = os.path.basename(img_fn).split('_')[-2]
+            # print(baseName,patient)
+            if patient not in patients.keys():
+                patients[patient] = {"Upper":{},"Lower":{}}
+            if "_Pred" in baseName:
+                if "Upper_" in baseName :
+                    patients[patient]["Upper"][f"pred_{num_label_pred}"]=img_fn
+                elif "Lower_" in baseName :
+                    patients[patient]["Lower"][f"pred_{num_label_pred}"]=img_fn
+               
+            else:
+                if "Upper_" in baseName :
+                    patients[patient]["Upper"][f"target"]=img_fn
+                elif "Lower_" in baseName :
+                    patients[patient]["Lower"][f"target"]=img_fn
+                
+    fail = 0
+    max = 0
+    mean = 0
+    nbr_pred = 0
+    error_lst = []
+    f = open(os.path.join(fiducial_dir,"Result.txt"),'w')
+    # print(patients['/Users/luciacev-admin/Desktop/test_accuracy/data/Patients /P10'])
+    
+    for patient,fiducials in patients.items():
+        print("Results for patient",patient)
+        f.write("Results for patient "+ str(patient)+"\n")
+        
+        for group,targ_res in fiducials.items():
+            print(" ",group,"landmarks:")
+            f.write(" "+ str(group)+" landmarks:\n")
+            print(targ_res.keys())
+            for label in range(0,32):
+                if f"pred_{label}" in targ_res.keys():
+                    target_lm_dic = ReadJson(targ_res["target"])
+                    pred_lm_dic = ReadJson(targ_res[f"pred_{label}"])
+                    for lm,t_data in target_lm_dic.items():
+                        if lm in pred_lm_dic.keys():
+                            a = np.array([float(t_data["x"]),float(t_data["y"]),float(t_data["z"])])
+                            p_data = pred_lm_dic[lm]
+                            b = np.array([float(p_data["x"]),float(p_data["y"]),float(p_data["z"])])
+                            # print(a,b)
+                            dist = np.linalg.norm(a-b)
+                            if dist > max: max = dist
+                            if dist < 4:
+                                nbr_pred+=1
+                                mean += dist
+                                error_dic["labels"].append(lm)
+                                error_dic["error"].append(dist)
+                                error_lst.append(dist)
+                            else:
+                                fail +=1
+                            print("  ",lm,"error = ", dist)
+                            f.write("  "+ str(lm)+" error = "+str(dist)+"\n")
+            f.write("\n")
+        f.write("\n")
+
+    print(fail,'fail')
+    print("STD :", np.std(error_lst))
+    print('Error max :',max)
+    print('Mean error',mean/nbr_pred)
+    
+    f.close
+    return error_dic
+
+def PlotResults(data):
+    sns.set_theme(style="whitegrid")
+    # data = {"labels":["B","B","N","N","B","N"], "error":[0.1,0.5,1.6,1.9,0.3,1.3]}    
+
+    # print(tips)
+    ax = sns.violinplot(x="labels", y="error", data=data, cut=0)
+    plt.show()

@@ -9,10 +9,10 @@ def Model(in_channels,out_channels):
         spatial_dims=2,
         in_channels=in_channels,
         out_channels=out_channels,
-        channels=(16, 32, 64, 128, 256),
-        strides=(2, 2, 2, 2),
+        channels=(32, 64, 128, 256, 512, 1024, 2058),
+        strides=(2, 2, 2, 2, 2, 2, 2),
+        num_res_units=4
     ).to(GV.DEVICE)
-
     return net
 
 def Training(train_dataloader,train_data,agent,epoch,nb_epoch,model,optimizer,loss_function,label,writer):
@@ -64,7 +64,7 @@ def Training(train_dataloader,train_data,agent,epoch,nb_epoch,model,optimizer,lo
     writer.add_scalar("training_loss", epoch_loss, epoch + 1)
 
 
-def Validation(val_dataloader,epoch,nb_epoch,model,agent,label,dice_metric,best_metric,writer,post_pred,post_true,metric_values,nb_channel,nb_val,write_image_interval):
+def Validation(val_dataloader,epoch,nb_epoch,model,agent,label,dice_metric,best_metric,writer,post_pred,post_true,metric_values,nb_val,write_image_interval,dir_models):
     print('-------- VALIDATION --------')
     print(f"---------- epoch :{epoch + 1}/{nb_epoch} ----------")
     print("-" * 30)
@@ -110,8 +110,7 @@ def Validation(val_dataloader,epoch,nb_epoch,model,agent,label,dice_metric,best_
             val_true_outputs_convert = [
                 post_true(val_true_outputs_tensor) for val_true_outputs_tensor in val_true_outputs_list
             ]
-            print(val_pred_outputs_convert.shape)
-            print(val_true_outputs_convert.shape)
+           
             dice_metric(y_pred=val_pred_outputs_convert, y=val_true_outputs_convert)
 
         metric = dice_metric.aggregate().item()
@@ -121,7 +120,7 @@ def Validation(val_dataloader,epoch,nb_epoch,model,agent,label,dice_metric,best_
         if metric > best_metric:
             best_metric = metric
             best_metric_epoch = epoch + 1
-            torch.save(model.state_dict(), "best_metric_model.pth")
+            torch.save(model.state_dict(), os.path.join(dir_models,f"best_metric_model_{label}.pth"))
             print("saved new best metric model")
         print("current epoch: {} current mean dice: {:.4f} best mean dice: {:.4f} at epoch {}".format(epoch + 1, metric, best_metric, best_metric_epoch))
 
@@ -138,7 +137,7 @@ def Validation(val_dataloader,epoch,nb_epoch,model,agent,label,dice_metric,best_
         if nb_val %  write_image_interval == 0:       
             writer.add_images("input",inputs,epoch)
             writer.add_images("true",y_true,epoch)
-            writer.add_images("output",outputs_pred,epoch)
+            writer.add_images("output",val_pred[:,1:,:,:],epoch)
             
     writer.close()
-            
+

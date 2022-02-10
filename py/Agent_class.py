@@ -28,19 +28,26 @@ from pytorch3d.structures import Meshes
 from pytorch3d.renderer import TexturesVertex
 from tqdm.std import tqdm
 from statistics import mean
-
+from scipy import linalg
 
 
 
 icosahedron = CreateIcosahedron(1, 1)
-sphere_points = []
-for pid in range(icosahedron.GetNumberOfPoints()):
-    spoint = icosahedron.GetPoint(pid)
-    sphere_points.append([point for point in spoint])
+sphere_points=[]
+sphere_points = ([0,0,1],
+                 np.array([0.5,0.,1.0])/linalg.norm([0.5,0.5,1.0]),
+                 np.array([-0.5,0.,1.0])/linalg.norm([-0.5,-0.5,1.0]),
+                 np.array([0,0.5,1])/linalg.norm([1,0,1]),
+                 np.array([0,-0.5,1])/linalg.norm([0,1,1])
+                )
+# for pid in range(icosahedron.GetNumberOfPoints()):
+#     spoint = icosahedron.GetPoint(pid)
+#     sphere_points.append([point for point in spoint])
 
-got = itemgetter(0,4)(sphere_points)
-CAMERA_POSITION = np.array(got)
-# CAMERA_POSITION = np.array(sphere_points)
+# got = itemgetter(0,4)(sphere_points)
+# CAMERA_POSITION = np.array(got)
+# print(sphere_points)
+CAMERA_POSITION = np.array(sphere_points)
 
 
 class Agent:
@@ -48,10 +55,7 @@ class Agent:
         self,
         renderer, 
         renderer2,
-        target,
         device, 
-        # label,
-        save_folder = "", 
         radius = 1,
         verbose = True,
         ):
@@ -59,9 +63,6 @@ class Agent:
         self.renderer = renderer
         self.renderer2=renderer2
         self.device = device
-        self.target = target
-        self.writer = SummaryWriter(os.path.join(save_folder,"Run_"+target))
-        # self.label = label
         self.camera_points = torch.tensor(CAMERA_POSITION).type(torch.float32).to(self.device)
         self.scale = 0
         self.radius = radius
@@ -101,13 +102,14 @@ class Agent:
             if rend:
                 renderer = self.renderer2
                 images = renderer(meshes_world=meshes.clone(), R=R, T=T.to(self.device))
-                y = images[:,:,:,:-2]
-                # print(y.shape)
-                yr = torch.where(y[:,:,:,0]<=seuil,0.,0.).unsqueeze(-1)
-                yg = torch.where(y[:,:,:,1]>seuil,1.,0.).unsqueeze(-1)
-                # y = torch.cat((yr,yg),dim=-1)
-                y = (yr + yg).to(torch.float32)
-                # print(y.shape)
+                y = images[:,:,:,:-1]
+
+                # yd = torch.where(y[:,:,:,:]<=seuil,0.,0.)
+                yr = torch.where(y[:,:,:,0]>seuil,1.,0.).unsqueeze(-1)
+                yg = torch.where(y[:,:,:,1]>seuil,2.,0.).unsqueeze(-1)
+                yb = torch.where(y[:,:,:,2]>seuil,3.,0.).unsqueeze(-1)
+
+                y = ( yr + yg + yb).to(torch.float32)
 
                 y = y.permute(0,3,1,2)
               
@@ -126,7 +128,7 @@ class Agent:
         
         return img_batch
     
-    def get_view_rasterize(self,meshes,rend=False):
+    def get_view_rasterize(self,meshes):
         spc = self.positions
         img_lst = torch.empty((0)).to(self.device)
         tens_pix_to_face = torch.empty((0)).to(self.device)
@@ -143,12 +145,14 @@ class Agent:
             images = images[:,:-1,:,:]
 
             pix_to_face, zbuf, bary_coords, dists = renderer.rasterizer(meshes.clone())
-            
-            img_lst = torch.cat((img_lst,images.unsqueeze(0)),dim=0)
+            zbuf = zbuf.permute(0, 3, 1, 2)
+            y = torch.cat([images, zbuf], dim=1)
+
+            img_lst = torch.cat((img_lst,y.unsqueeze(0)),dim=0)
             tens_pix_to_face = torch.cat((tens_pix_to_face,pix_to_face.unsqueeze(0)),dim=0)
         img_batch =  img_lst.permute(1,0,2,3,4)
     
-        return img_batch , tens_pix_to_face       
+        return img_batch , tens_pix_to_face      
 
 
 def PlotAgentViews(view):
