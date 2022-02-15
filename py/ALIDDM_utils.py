@@ -12,7 +12,7 @@ import GlobVar as GV
 from GlobVar import SELECTED_JAW
 from utils import ReadSurf
 from vtk.util.numpy_support import vtk_to_numpy, numpy_to_vtk
-
+import numpy as np
 from utils import(
     PolyDataToTensors
 ) 
@@ -33,6 +33,7 @@ from monai.transforms import (
 import monai
 import torchvision.transforms as transforms
 from shader import *
+from post_process import NeighborPoints
 
 def GetLandmarkPosFromLP(lm_pos,target):
     lst_lm =  GV.LANDMARKS[GV.SELECTED_JAW]
@@ -339,19 +340,45 @@ def Convert_RGB_to_grey(lst_images):
 
     return tens_images
 
-def Gen_patch(V, RED, LP, label, radius):
+def Gen_patch(lst_surf, V, RED, LP, label, step_neighbor):
     lst_landmarks = Get_lst_landmarks(LP,GV.LABEL[label])
-    color_index=0
-    for landmark_coord in lst_landmarks:
-        landmark_coord =landmark_coord.unsqueeze(1).to(GV.DEVICE)
-        distance = torch.cdist(landmark_coord, V, p=2)
-        distance = distance.squeeze(1)
-        index_pos_land = (distance<radius).nonzero(as_tuple=True)
-        color = [torch.tensor([1,0,0]),torch.tensor([0,1,0]),torch.tensor([0,0,1])]
-        for i,index in enumerate(index_pos_land[0]):
-            RED[index][index_pos_land[1][i]] = color[color_index]
-        color_index +=1 
+    for surf in lst_surf:
+        locator = vtk.vtkOctreePointLocator()
+        locator.SetDataSet(surf)
+        locator.BuildLocator()
+        for color_index,landmark_coord in enumerate(lst_landmarks):
+            patch = []
+            landmark_coord =landmark_coord.squeeze(0).to(GV.DEVICE)
+            # print(landmark_coord)
+            pid = locator.FindClosestPoint(landmark_coord.cpu().numpy())
+            # print(pid)
+            all_neighbor_pid = NeighborPoints(surf,pid)
+            patch.append(all_neighbor_pid)
+        
+            for step in range(step_neighbor):
+                for ids in all_neighbor_pid:
+                    all_neighbor_pid_step = NeighborPoints(surf,ids)
+                    patch.append(all_neighbor_pid_step)           
+                    all_neighbor_pid = all_neighbor_pid_step
 
+            patch = np.concatenate(patch).tolist()
+            
+            # print(patch)
+            
+            patch = np.unique(patch)
+            # print(patch)
+            color = [torch.tensor([1,0,0]),torch.tensor([0,1,0]),torch.tensor([0,0,1])]
+            for i,index in enumerate(patch):
+                RED.squeeze(0)[index] = color[color_index]                
+            # print(all_neighbor_pid)
+            # landmark_coord =landmark_coord.unsqueeze(1).to(GV.DEVICE)
+            # distance = torch.cdist(landmark_coord, V, p=2)
+            # distance = distance.squeeze(1)
+            # index_pos_land = (distance<radius).nonzero(as_tuple=True)
+            # color = [torch.tensor([1,0,0]),torch.tensor([0,1,0]),torch.tensor([0,0,1])]
+            # for i,index in enumerate(index_pos_land[0]):
+            #     RED[index][index_pos_land[1][i]] = color[color_index]
+        
     return RED
 
 def Gen_one_patch(V, RED, radius, coord):
@@ -369,12 +396,12 @@ def Gen_one_patch(V, RED, radius, coord):
               
     return RED
 
-def Gen_mesh_patch(V,F,CN,LP,label):
+def Gen_mesh_patch(surf,V,F,CN,LP,label):
     verts_rgb = torch.ones_like(CN)[None].squeeze(0)  # (1, V, 3)
     verts_rgb[:,:, 0] *= 0  # red
     verts_rgb[:,:, 1] *= 0  # green
-    verts_rgb[:,:, 2] *= 0  # blue
-    patch_region = Gen_patch(V, verts_rgb, LP, label, 0.02)
+    verts_rgb[:,:, 2] *= 0  # blue 
+    patch_region = Gen_patch(surf, V, verts_rgb, LP, label, 3)
     textures = TexturesVertex(verts_features=patch_region)
     meshes = Meshes(
         verts=V,   

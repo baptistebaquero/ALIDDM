@@ -9,8 +9,8 @@ def Model(in_channels,out_channels):
         spatial_dims=2,
         in_channels=in_channels,
         out_channels=out_channels,
-        channels=(32, 64, 128, 256, 512, 1024, 2058),
-        strides=(2, 2, 2, 2, 2, 2, 2),
+        channels=(32, 64, 128, 256, 512),
+        strides=(2, 2, 2, 2),
         num_res_units=4
     ).to(GV.DEVICE)
     return net

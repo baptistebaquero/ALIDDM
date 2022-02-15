@@ -143,7 +143,7 @@ def ResultAccuracy(fiducial_dir):
                             # print(a,b)
                             dist = np.linalg.norm(a-b)
                             if dist > max: max = dist
-                            if dist < 4:
+                            if dist < 5:
                                 nbr_pred+=1
                                 mean += dist
                                 error_dic["labels"].append(lm)

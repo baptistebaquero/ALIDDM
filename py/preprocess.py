@@ -4,7 +4,7 @@ import glob
 from posixpath import basename
 import shutil
 import vtk
-import post_process
+# import post_process
 import fly_by_features as fbf
 import numpy as np
 from vtk.util.numpy_support import vtk_to_numpy
@@ -302,12 +302,12 @@ if __name__ == '__main__':
     input_param = parser.add_argument_group('input files')
     # input_param.add_argument('--dir_project', type=str, help='Directory with all the project', default='/Users/luciacev-admin/Documents/AutomatedLandmarks')
     # input_param.add_argument('--dir_data', type=str, help='Input directory with 3D images', default=parser.parse_args().dir_project+'/fly-by-cnn/data')
-    input_param.add_argument('--dir_data', type=str, help='Input directory with 3D images', default='/Users/luciacev-admin/Desktop/data_O')
+    input_param.add_argument('--dir_data', type=str, help='Input directory with 3D images', default='/Users/luciacev-admin/Desktop/data_ALIDDM')
     input_param.add_argument('--landmarks_dir', type=str, help='landmarks directory', default=parser.parse_args().dir_data+'/landmarks')
     input_param.add_argument('--model_dir', type=str, help='model file directory', default=parser.parse_args().dir_data+'/teeth_gum')
 
     output_params = parser.add_argument_group('Output parameters')
-    output_params.add_argument('--out', type=str, help='Output directory', default=parser.parse_args().dir_data+'/dataset')
+    output_params.add_argument('--out', type=str, help='Output directory', default=parser.parse_args().dir_data+'/data')
     
     args = parser.parse_args()
     main(args)

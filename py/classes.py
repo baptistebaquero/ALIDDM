@@ -56,7 +56,7 @@ class FlyByDataset(Dataset):
         mean_arr = torch.tensor(mean_arr,dtype=torch.float64).to(self.device)
         scale_factor = torch.tensor(scale_factor,dtype=torch.float64).to(self.device)
 
-        return verts, faces, region_id, color_normals, landmark_pos, mean_arr, scale_factor
+        return surf, verts, faces, region_id, color_normals, landmark_pos, mean_arr, scale_factor
    
     def get_landmarks_position(self,idx, mean_arr, scale_factor, angle, vector):
        
@@ -81,15 +81,16 @@ class FlyByDataset(Dataset):
 
         
 def pad_verts_faces(batch):
-    verts = [v for v, f, ri, cn, lp, sc, ma  in batch]
-    faces = [f for v, f, ri, cn, lp, sc, ma  in batch]
-    region_id = [ri for v, f, ri, cn, lp, sc, ma  in batch]
-    color_normals = [cn for v, f, ri, cn, lp, sc, ma, in batch]
-    landmark_position = [lp for v, f, ri, cn, lp, sc, ma in batch]
-    scale_factor = [sc for v, f, ri, cn, lp , sc, ma  in batch]
-    mean_arr = [ma for v, f, ri, cn,lp, sc, ma   in batch]
+    surf = [s for s, v, f, ri, cn, lp, sc, ma  in batch]
+    verts = [v for s, v, f, ri, cn, lp, sc, ma  in batch]
+    faces = [f for s, v, f, ri, cn, lp, sc, ma  in batch]
+    region_id = [ri for s, v, f, ri, cn, lp, sc, ma  in batch]
+    color_normals = [cn for s, v, f, ri, cn, lp, sc, ma, in batch]
+    landmark_position = [lp for s, v, f, ri, cn, lp, sc, ma in batch]
+    scale_factor = [sc for s, v, f, ri, cn, lp , sc, ma  in batch]
+    mean_arr = [ma for s, v, f, ri, cn,lp, sc, ma   in batch]
 
-    return pad_sequence(verts, batch_first=True, padding_value=0.0), pad_sequence(faces, batch_first=True, padding_value=-1),region_id, pad_sequence(color_normals, batch_first=True, padding_value=0.), landmark_position, mean_arr, scale_factor
+    return surf, pad_sequence(verts, batch_first=True, padding_value=0.0), pad_sequence(faces, batch_first=True, padding_value=-1),region_id, pad_sequence(color_normals, batch_first=True, padding_value=0.), landmark_position, mean_arr, scale_factor
 
 
 
