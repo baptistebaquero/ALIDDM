@@ -53,6 +53,7 @@ def main(args):
     write_image_interval = 1
 
     best_metric = -1
+    best_metric_epoch =-1
     writer = SummaryWriter()
     
     for epoch in range(args.max_epoch):
@@ -70,7 +71,7 @@ def main(args):
             )
 
         if (epoch) % args.val_freq == 0:        
-            Validation(
+            best_metric,best_metric_epoch = Validation(
                 val_dataloader=val_dataloader,
                 epoch= epoch,
                 nb_epoch=args.max_epoch,
@@ -79,6 +80,7 @@ def main(args):
                 label=args.label,
                 dice_metric=dice_metric,
                 best_metric=best_metric,
+                best_metric_epoch=best_metric_epoch,
                 nb_val = nb_val,
                 writer=writer,
                 write_image_interval=write_image_interval,

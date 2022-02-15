@@ -64,7 +64,7 @@ def Training(train_dataloader,train_data,agent,epoch,nb_epoch,model,optimizer,lo
     writer.add_scalar("training_loss", epoch_loss, epoch + 1)
 
 
-def Validation(val_dataloader,epoch,nb_epoch,model,agent,label,dice_metric,best_metric,writer,post_pred,post_true,metric_values,nb_val,write_image_interval,dir_models):
+def Validation(val_dataloader,epoch,nb_epoch,model,agent,label,dice_metric,best_metric,best_metric_epoch,writer,post_pred,post_true,metric_values,nb_val,write_image_interval,dir_models):
     print('-------- VALIDATION --------')
     print(f"---------- epoch :{epoch + 1}/{nb_epoch} ----------")
     print("-" * 30)
@@ -141,3 +141,4 @@ def Validation(val_dataloader,epoch,nb_epoch,model,agent,label,dice_metric,best_
             
     writer.close()
 
+    return best_metric,best_metric_epoch

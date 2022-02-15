@@ -12,10 +12,14 @@ from Agent_class import *
 from prediction_utils import *
 from monai.networks.nets import UNet
 import cv2 as cv
+from monai.transforms import AsDiscrete
+from monai.data import decollate_batch
+
 
 def main(args):
+    writer_pred = SummaryWriter()
+
     phong_renderer,mask_renderer = GenPhongRenderer(args.image_size,args.blur_radius,args.faces_per_pixel,GV.DEVICE)
-    target = GV.LANDMARKS[GV.SELECTED_JAW][1]
 
     agent = Agent(
         renderer=phong_renderer,
@@ -45,8 +49,8 @@ def main(args):
         spatial_dims=2,
         in_channels=4,
         out_channels=4,
-        channels=(32, 64, 128, 256, 512, 1024, 2058),
-        strides=(2, 2, 2, 2, 2, 2, 2),
+        channels=( 16, 32, 64, 128, 256, 512),
+        strides=(2, 2, 2, 2, 2),
         num_res_units=4
     ).to(GV.DEVICE)
     
@@ -58,13 +62,34 @@ def main(args):
     net.load_state_dict(torch.load(args.model))
     images_pred = net(inputs)
 
+    print(images_pred.type(),inputs.type())
+    print(images_pred.shape,inputs.shape)
+    post_pred = AsDiscrete(argmax=True, to_onehot=True, num_classes=4)
 
+
+    val_pred_outputs_list = decollate_batch(images_pred)                
+    val_pred_outputs_convert = [
+        post_pred(val_pred_outputs_tensor) for val_pred_outputs_tensor in val_pred_outputs_list
+    ]
+    val_pred = torch.empty((0)).to(GV.DEVICE)
+    for image in images_pred:
+        val_pred = torch.cat((val_pred,post_pred(image).unsqueeze(0).to(GV.DEVICE)),dim=0)
+    
+    # print(val_pred.shape)
+    # writer_pred.add_images("prediction",val_pred[:,1:,:,:])
+    # writer_pred.add_images("prediction_input",inputs[:,:-1,:,:])
+
+    # writer_pred.close()
+    
     # print(inputs.shape)
     # print(images_pred.shape)
     
     
     pred_data = images_pred.detach().cpu().unsqueeze(0).type(torch.int16) #torch.Size([1, 2, 2, 224, 224])
+    # print(images_pred.shape,pred_data.shape)
     pred_data = torch.argmax(pred_data, dim=2).unsqueeze(2)
+    
+    
     # print(pred_data.shape)
     # meshe_2 = Gen_mesh_one_patch(V,F,CN,LP)
     # images_pred =  agent.GetView(meshe_2,rend=True) #images : torch.Size([1, 12, 3, 20, 20])   tens_pix_to_face : torch.Size([12, 1, 20, 20, 1])
@@ -132,7 +157,7 @@ def main(args):
     # print(groupe_data)
     lm_lst = GenControlePoint(groupe_data)
     # print(lm_lst)
-    WriteJson(lm_lst,os.path.join(args.out_path,f"Lower_P10_teeth_{args.label}_Pred.json"))
+    WriteJson(lm_lst,os.path.join(args.out_path,f"Lower_P20_teeth_{args.label}_Pred.json"))
 
 
 
@@ -169,12 +194,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Automatic Landmark Identification on Digital Dental Model', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     input_param = parser.add_argument_group('input files')
-    # input_param.add_argument('--model_teeth', type=str, help='path of 3D model of the teeth of 1 patient', default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM/data/patients/P40/Lower/Lower_P40.vtk')
-    input_param.add_argument('--model_teeth', type=str, help='path of 3D model of the teeth of 1 patient', default='/Users/luciacev-admin/Desktop/data_ALIDDM/data/Patients /P1/Lower/Lower_P1.vtk')
+    input_param.add_argument('--model_teeth', type=str, help='path of 3D model of the teeth of 1 patient', default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM/data/patients/P20/Lower/Lower_P20.vtk')
+    # input_param.add_argument('--model_teeth', type=str, help='path of 3D model of the teeth of 1 patient', default='/Users/luciacev-admin/Desktop/data_ALIDDM/data/Patients /P3/Lower/Lower_P3.vtk')
     # input_param.add_argument('--jsonfile', type=str, help='path of jsonfile of the teeth of 1 patient', default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM/data/patients/P10/Lower/Lower_P10.json')
 
     # input_group.add_argument('--dir_cash', type=str, help='Output directory of the training',default=parser.parse_args().dir_data+'/Cash')
-    input_param.add_argument('--model', type=str, help='loading of model', default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM/data/best_models/best_metric_model_31.pth')
+    input_param.add_argument('--model', type=str, help='loading of model', default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM/data/best_models/best_metric_model_24.pth')
 
     #Environment
     input_param.add_argument('-j','--jaw',type=str,help="Prepare the data for uper or lower landmark training (ex: L U)", default="L")
@@ -183,7 +208,7 @@ if __name__ == '__main__':
 
 
     #Prediction data
-    input_param.add_argument('--image_size',type=int, help='size of the picture', default=512)
+    input_param.add_argument('--image_size',type=int, help='size of the picture', default=224)
     input_param.add_argument('--blur_radius',type=int, help='blur raius', default=0)
     input_param.add_argument('--faces_per_pixel',type=int, help='faces per pixels', default=1)
  
