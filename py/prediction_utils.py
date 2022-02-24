@@ -99,7 +99,7 @@ def ResultAccuracy(fiducial_dir):
         if os.path.isfile(img_fn) and ".json" in img_fn:
             baseName = os.path.basename(img_fn)
             patient = os.path.dirname(os.path.dirname(img_fn))
-            num_label_pred = os.path.basename(img_fn).split('_')[-2]
+            num_label_pred = os.path.basename(img_fn).split('_')[1][1:]
             # print(baseName,patient)
             if patient not in patients.keys():
                 patients[patient] = {"Upper":{},"Lower":{}}
@@ -171,3 +171,18 @@ def PlotResults(data):
     # print(tips)
     ax = sns.violinplot(x="labels", y="error", data=data, cut=0)
     plt.show()
+
+def remove_extra_faces(num_faces,RI,label):
+    last_num_faces =[]
+    for face in num_faces:
+        print(label)
+        print(face.item())
+        print(RI.shape)
+        print(RI.squeeze(0)[int(face.item())])
+        if RI.squeeze(0)[int(face.item())] == label:
+            print("perfecr")
+            last_num_faces.append(face)
+        else:
+            print('wrong label')
+    return last_num_faces
+        

@@ -88,8 +88,7 @@ def main(args):
                 post_pred=post_pred,
                 metric_values=metric_values,
                 dir_models=args.dir_models
-
-            )
+                )
 
     #         if early_stopping == True:
     #             break
@@ -97,11 +96,11 @@ def main(args):
 
 
 
-    for batch, (S, V, F, RI, CN, LP, MR, SF) in enumerate(train_dataloader):
+    # for batch, (S, V, F, RI, CN, LP, MR, SF) in enumerate(train_dataloader):
 
-        meshes = Gen_mesh_patch(S,V,F,CN,LP,args.label)
-        dic = {"teeth_landmarks_meshes": meshes}
-        plot_fig(dic)
+    #     meshes = Gen_mesh_patch(S,V,F,CN,LP,args.label)
+    #     dic = {"teeth_landmarks_meshes": meshes}
+    #     plot_fig(dic)
 
 
     #     print(LP)
@@ -170,8 +169,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Automatic Landmark Identification on Digital Dental Model', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     input_param = parser.add_argument_group('input files')
-    input_param.add_argument('--dir_project', type=str, help='dataset directory', default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM')
-    # input_param.add_argument('--dir_project', type=str, help='dataset directory', default='/Users/luciacev-admin/Desktop/ALIDDM_BENCHMARK')
+    # input_param.add_argument('--dir_project', type=str, help='dataset directory', default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM')
+    input_param.add_argument('--dir_project', type=str, help='dataset directory', default='/Users/luciacev-admin/Desktop/ALIDDM_BENCHMARK')
     input_param.add_argument('--dir_data', type=str, help='Input directory with all the data', default=parser.parse_args().dir_project+'/data')
     input_param.add_argument('--dir_patients', type=str, help='Input directory with the meshes',default=parser.parse_args().dir_data+'/patients')
     input_param.add_argument('--csv_file', type=str, help='CSV of the data split',default=parser.parse_args().dir_data+'/data_split.csv')
@@ -182,14 +181,14 @@ if __name__ == '__main__':
     #Environment
     input_param.add_argument('-j','--jaw',type=str,help="Prepare the data for uper or lower landmark training (ex: L U)", default="L")
     input_param.add_argument('-sr', '--sphere_radius', type=float, help='Radius of the sphere with all the cameras', default=0.2)
-    input_param.add_argument('--label', type=str, help='label of the teeth',default="22")
+    input_param.add_argument('--label', type=str, help='label of the teeth',default="18")
    
     #Training data
     input_param.add_argument('--image_size',type=int, help='size of the picture', default=224)
     input_param.add_argument('--blur_radius',type=int, help='blur raius', default=0)
     input_param.add_argument('--faces_per_pixel',type=int, help='faces per pixels', default=1)
     
-    input_param.add_argument('-bs', '--batch_size', type=int, help='Batch size', default=4)
+    input_param.add_argument('-bs', '--batch_size', type=int, help='Batch size', default=10)
     input_param.add_argument('-nc', '--num_classes', type=int, help='number of classes', default=4)
 
     # input_param.add_argument('-ds', '--data_size', type=int, help='Data size', default=100)
@@ -206,7 +205,7 @@ if __name__ == '__main__':
     # parser.add_argument('--nbr_pictures',type=int,help='number of pictures per tooth', default=5)
    
     output_params = parser.add_argument_group('Output parameters')
-    output_params.add_argument('--dir_models', type=str, help='Output directory with all the networks',default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM/data/best_models')
+    # output_params.add_argument('--dir_models', type=str, help='Output directory with all the networks',default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM/data/best_models')
 
     
     args = parser.parse_args()

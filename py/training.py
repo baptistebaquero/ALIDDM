@@ -1,4 +1,6 @@
 from monai.networks.nets import UNet
+from monai.networks.nets import UNETR
+
 from Agent_class import *
 from ALIDDM_utils import *
 from monai.data import decollate_batch
@@ -9,11 +11,14 @@ def Model(in_channels,out_channels):
         spatial_dims=2,
         in_channels=in_channels,
         out_channels=out_channels,
-        channels=(32, 64, 128, 256, 512),
-        strides=(2, 2, 2, 2),
+        channels=(16, 32, 64, 128, 256, 512),
+        strides=(2, 2, 2, 2, 2),
         num_res_units=4
     ).to(GV.DEVICE)
+
     return net
+
+
 
 def Training(train_dataloader,train_data,agent,epoch,nb_epoch,model,optimizer,loss_function,label,writer):
     print('-------- TRAINING --------')          
@@ -22,7 +27,7 @@ def Training(train_dataloader,train_data,agent,epoch,nb_epoch,model,optimizer,lo
     model.train() # Switch to training mode
     epoch_loss = 0
     step = 0
-    for batch, (V, F, RI, CN, LP, MR, SF) in enumerate(train_dataloader):
+    for batch, (S, V, F, RI, CN, LP, MR, SF) in enumerate(train_dataloader):
         step += 1
         textures = TexturesVertex(verts_features=CN)
         meshes = Meshes(
@@ -35,7 +40,7 @@ def Training(train_dataloader,train_data,agent,epoch,nb_epoch,model,optimizer,lo
 
         images =  agent.GetView(meshes) #[batch,num_ima,channels,size,size]
         
-        meshes_2 = Gen_mesh_patch(V,F,CN,LP,label)
+        meshes_2 = Gen_mesh_patch(S,V,F,CN,LP,label)
      
         land_images =  agent.GetView(meshes_2,rend=True) #[batch,num_ima,channels,size,size]
         # PlotAgentViews(land_images.detach().unsqueeze(0).cpu())
@@ -71,7 +76,7 @@ def Validation(val_dataloader,epoch,nb_epoch,model,agent,label,dice_metric,best_
     nb_val += 1 
     model.eval()
     with torch.no_grad():    
-        for batch, (V, F, RI, CN, LP, MR, SF) in enumerate(val_dataloader):   
+        for batch, (S, V, F, RI, CN, LP, MR, SF) in enumerate(val_dataloader):   
             
             textures = TexturesVertex(verts_features=CN)
             meshes = Meshes(
@@ -85,7 +90,7 @@ def Validation(val_dataloader,epoch,nb_epoch,model,agent,label,dice_metric,best_
             images =  agent.GetView(meshes)
             
             # lst_landmarks = Get_lst_landmarks(LP,GV.LABEL[label])
-            meshes_2 = Gen_mesh_patch(V,F,CN,LP,label)
+            meshes_2 = Gen_mesh_patch(S,V,F,CN,LP,label)
 
             land_images =  agent.GetView(meshes_2,rend=True) 
             

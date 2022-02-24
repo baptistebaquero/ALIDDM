@@ -152,7 +152,7 @@ def GenDataSplitCSV(dir_data,csv_path,val_p,test_p):
             
             if ".json" in img_fn:
                 patient_dic[patient_ID][jow]["lm"] = img_fn
-            if ".vtk" in img_fn:
+            elif ".vtk" in img_fn:
                 patient_dic[patient_ID][jow]["surf"] = img_fn
 
     # print(patient_dic)
@@ -180,27 +180,28 @@ def GenDataSplitCSV(dir_data,csv_path,val_p,test_p):
     for type,dic in data_dic.items():
         for patient in dic:
             for jaw,data in patient.items():
-                rows = {
-                    'for':type,
-                    'jaw':jaw,
-                    'surf':data["surf"].replace(dir_data,"")[1:],
-                    'landmarks':data["lm"].replace(dir_data,"")[1:],
-                    }
-                print(data["surf"])
-                read_surf = ReadSurf(data["surf"])
-                ids = ToTensor(dtype=torch.int64, device=GV.DEVICE)(vtk_to_numpy(read_surf.GetPointData().GetScalars("PredictedID")))
-                print(ids)
+                if jaw == "L":
+                    rows = {
+                        'for':type,
+                        'jaw':jaw,
+                        'surf':data["surf"].replace(dir_data,"")[1:],
+                        'landmarks':data["lm"].replace(dir_data,"")[1:],
+                        }
+                    # print(data["surf"])
+                    read_surf = ReadSurf(data["surf"])
+                    ids = ToTensor(dtype=torch.int64, device=GV.DEVICE)(vtk_to_numpy(read_surf.GetPointData().GetScalars("PredictedID")))
+                    # print(ids)
 
-                for label in range(2,32):
-                    
-                    if label in ids:
-                        present = 1
-                    else:
-                        present = 0
-                    
-                    rows[str(label)] = present
+                    for label in range(2,32):
+                        
+                        if label in ids:
+                            present = 1
+                        else:
+                            present = 0
+                        
+                        rows[str(label)] = present
 
-                data_list.append(rows)
+                    data_list.append(rows)
     
     with open(csv_path, 'w', encoding='UTF8', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -340,45 +341,49 @@ def Convert_RGB_to_grey(lst_images):
 
     return tens_images
 
-def Gen_patch(lst_surf, V, RED, LP, label, step_neighbor):
-    lst_landmarks = Get_lst_landmarks(LP,GV.LABEL[label])
-    for surf in lst_surf:
-        locator = vtk.vtkOctreePointLocator()
-        locator.SetDataSet(surf)
-        locator.BuildLocator()
-        for color_index,landmark_coord in enumerate(lst_landmarks):
-            patch = []
-            landmark_coord =landmark_coord.squeeze(0).to(GV.DEVICE)
-            # print(landmark_coord)
-            pid = locator.FindClosestPoint(landmark_coord.cpu().numpy())
-            # print(pid)
-            all_neighbor_pid = NeighborPoints(surf,pid)
-            patch.append(all_neighbor_pid)
-        
-            for step in range(step_neighbor):
-                for ids in all_neighbor_pid:
-                    all_neighbor_pid_step = NeighborPoints(surf,ids)
-                    patch.append(all_neighbor_pid_step)           
-                    all_neighbor_pid = all_neighbor_pid_step
+# def Gen_patch(lst_surf, V, RED, LP, label, step_neighbor):
+#     lst_landmarks = Get_lst_landmarks(LP,GV.LABEL[label])
+#     for surf_index,surf in enumerate(lst_surf):
+#         locator = vtk.vtkOctreePointLocator()
+#         locator.SetDataSet(surf)
+#         locator.BuildLocator()
+#         for color_index,landmark_coord in enumerate(lst_landmarks):
+#             patch = []
 
-            patch = np.concatenate(patch).tolist()
-            
-            # print(patch)
-            
-            patch = np.unique(patch)
-            # print(patch)
-            color = [torch.tensor([1,0,0]),torch.tensor([0,1,0]),torch.tensor([0,0,1])]
-            for i,index in enumerate(patch):
-                RED.squeeze(0)[index] = color[color_index]                
-            # print(all_neighbor_pid)
-            # landmark_coord =landmark_coord.unsqueeze(1).to(GV.DEVICE)
-            # distance = torch.cdist(landmark_coord, V, p=2)
-            # distance = distance.squeeze(1)
-            # index_pos_land = (distance<radius).nonzero(as_tuple=True)
-            # color = [torch.tensor([1,0,0]),torch.tensor([0,1,0]),torch.tensor([0,0,1])]
-            # for i,index in enumerate(index_pos_land[0]):
-            #     RED[index][index_pos_land[1][i]] = color[color_index]
+#             landmark_coord =landmark_coord.to(GV.DEVICE)
+#             pid = locator.FindClosestPoint(landmark_coord[surf_index].cpu().numpy())
+#             all_neighbor_pid = NeighborPoints(surf,pid)
+#             patch.append(all_neighbor_pid)
         
+#             for step in range(step_neighbor):
+#                 for ids in all_neighbor_pid:
+#                     all_neighbor_pid_step = NeighborPoints(surf,ids)
+#                     patch.append(all_neighbor_pid_step)           
+#                     all_neighbor_pid = all_neighbor_pid_step
+
+#             patch = np.concatenate(patch).tolist()
+                        
+#             patch = np.unique(patch)
+#             color = [torch.tensor([1,0,0]),torch.tensor([0,1,0]),torch.tensor([0,0,1])]
+#             for i,index in enumerate(patch):
+#                 RED[surf_index][index] = color[color_index]                
+          
+        
+#     return RED
+
+def Gen_patch(V, RED, LP, label, radius):
+    lst_landmarks = Get_lst_landmarks(LP,GV.LABEL[label])
+    color_index=0
+    for landmark_coord in lst_landmarks:
+        landmark_coord =landmark_coord.unsqueeze(1).to(GV.DEVICE)
+        distance = torch.cdist(landmark_coord, V, p=2)
+        distance = distance.squeeze(1)
+        index_pos_land = (distance<radius).nonzero(as_tuple=True)
+        color = [torch.tensor([1,0,0]),torch.tensor([0,1,0]),torch.tensor([0,0,1])]
+        for i,index in enumerate(index_pos_land[0]):
+            RED[index][index_pos_land[1][i]] = color[color_index]
+        color_index +=1 
+    
     return RED
 
 def Gen_one_patch(V, RED, radius, coord):
@@ -401,7 +406,8 @@ def Gen_mesh_patch(surf,V,F,CN,LP,label):
     verts_rgb[:,:, 0] *= 0  # red
     verts_rgb[:,:, 1] *= 0  # green
     verts_rgb[:,:, 2] *= 0  # blue 
-    patch_region = Gen_patch(surf, V, verts_rgb, LP, label, 3)
+    # patch_region = Gen_patch(surf, V, verts_rgb, LP, label, 3)
+    patch_region = Gen_patch(V, verts_rgb, LP, label, 0.02)    
     textures = TexturesVertex(verts_features=patch_region)
     meshes = Meshes(
         verts=V,   

@@ -20,6 +20,9 @@ def main(args):
     model_normpath = os.path.normpath("/".join([args.model_dir,'**','']))
     landmarks_normpath = os.path.normpath("/".join([args.landmarks_dir,'**','']))
 
+    new_model_normpath = os.path.normpath("/".join([args.new_models_dir,'**','']))
+    new_landmarks_normpath = os.path.normpath("/".join([args.new_landmarks_dir,'**','']))
+
     lenght = 41
     # radius = 0.5
 
@@ -28,43 +31,69 @@ def main(args):
 
     dic_patient = {}
 
-
-    if args.landmarks_dir:
-        for jsonfile in sorted(glob.iglob(landmarks_normpath, recursive=True)):
+    # if args.landmarks_dir:
+    #     for jsonfile in sorted(glob.iglob(landmarks_normpath, recursive=True)):
+    #         if os.path.isfile(jsonfile) and True in [ext in jsonfile for ext in [".json"]]:
+    #             num = os.path.basename(jsonfile).split('_')[0][1:]
+    #             if True in ['P'+ str(ocl) + '_' in jsonfile for ocl in list(range(1,lenght))]:
+    #                 # list_jonfile_L.append(jsonfile)
+    #                 if num in dic_patient.keys():
+    #                     dic_patient[num]['path_landmarks_L'] = jsonfile
+    #                 else:
+    #                     dic_patient[num] = {'path_landmarks_L' : jsonfile}
+    #             else :
+    #                 if str(int(num)-lenght+1) in dic_patient.keys():
+    #                     dic_patient[str(int(num)-lenght+1)]['path_landmarks_U'] = jsonfile                    
+    #                 else:
+    #                     dic_patient[str(int(num)-lenght+1)] = {'path_landmarks_U' : jsonfile}
+    
+    
+    # if args.model_dir:    
+    #     for model in sorted(glob.iglob(model_normpath, recursive=True)):
+    #         if os.path.isfile(model) and True in [ext in model for ext in [".vtk"]]:
+    #             num = os.path.basename(model).split('.')[0][1:]
+    #             if True in ['P'+ str(ocl) +'.' in model for ocl in list(range(1,lenght))]:
+    #                 if num in dic_patient.keys():
+    #                     dic_patient[num]['path_model_L'] = model
+    #                 else:
+    #                     dic_patient[num] = {'path_model_L' : model}
+    #             else :
+    #                 if str(int(num)-lenght+1) in dic_patient.keys():
+    #                     dic_patient[str(int(num)-lenght+1)]['path_model_U'] = model                    
+    #                 else:
+    #                     dic_patient[str(int(num)-lenght+1)] = {'path_model_U' : model}
+    
+    
+    if args.new_landmarks_dir:    
+        for jsonfile in sorted(glob.iglob(new_landmarks_normpath, recursive=False)):
             if os.path.isfile(jsonfile) and True in [ext in jsonfile for ext in [".json"]]:
-                num = os.path.basename(jsonfile).split('_')[0][1:]
-                if True in ['P'+ str(ocl) + '_' in jsonfile for ocl in list(range(1,lenght))]:
-                    # list_jonfile_L.append(jsonfile)
-                    if num in dic_patient.keys():
-                        dic_patient[num]['path_landmarks_L'] = jsonfile
-                    else:
-                        dic_patient[num] = {'path_landmarks_L' : jsonfile}
-                else :
-                    if str(int(num)-lenght+1) in dic_patient.keys():
-                        dic_patient[str(int(num)-lenght+1)]['path_landmarks_U'] = jsonfile                    
-                    else:
-                        dic_patient[str(int(num)-lenght+1)] = {'path_landmarks_U' : jsonfile}
-                   
-
-    if args.model_dir:    
-        for model in sorted(glob.iglob(model_normpath, recursive=True)):
+                num = os.path.basename(jsonfile).split('.')[0].split('_')[1][1:]
+                if num in dic_patient.keys():
+                    print(jsonfile)
+                    dic_patient[num]['path_landmarks_L'] = jsonfile
+                else:
+                    dic_patient[num] = {'path_landmarks_L' : jsonfile}
+               
+    
+    if args.new_models_dir:    
+        for model in sorted(glob.iglob(new_model_normpath, recursive=False)):
             if os.path.isfile(model) and True in [ext in model for ext in [".vtk"]]:
-                num = os.path.basename(model).split('.')[0][1:]
-                if True in ['P'+ str(ocl) +'.' in model for ocl in list(range(1,lenght))]:
-                    if num in dic_patient.keys():
-                        dic_patient[num]['path_model_L'] = model
-                    else:
-                        dic_patient[num] = {'path_model_L' : model}
-                else :
-                    if str(int(num)-lenght+1) in dic_patient.keys():
-                        dic_patient[str(int(num)-lenght+1)]['path_model_U'] = model                    
-                    else:
-                        dic_patient[str(int(num)-lenght+1)] = {'path_model_U' : model}
+                num = os.path.basename(model).split('.')[0].split('_')[2]
+                if num in dic_patient.keys():
+                    dic_patient[num]['path_model_L'] = model
+                else:
+                    dic_patient[num] = {'path_model_L' : model}
+  
 
-    # print(dic_patient['path_model_L'])
+
+    # print(dic_patient)
+   
+
+
+    
+    patient_id = 83
     for obj in dic_patient.items():
         obj=obj[1]
-        
         # surf_u = ReadSurf(obj["path_model_U"])
         # surf_l = ReadSurf(obj["path_model_L"])
 
@@ -75,8 +104,8 @@ def main(args):
         # # print(real_labels_u)
         # real_labels_np_u = vtk_to_numpy(real_labels_u)
         # real_labels_np_l = vtk_to_numpy(real_labels_l)
-        patient_id = os.path.basename(obj["path_model_L"]).split(".")[0]
-        outdir_patient_l = os.path.join(args.out,patient_id)
+        # patient_id = os.path.basename(obj["path_model_L"]).split(".")[0].spli("_")[2]
+        outdir_patient_l = os.path.join(args.out,f"P{str(patient_id)}")
         outdir_u = os.path.join(outdir_patient_l,"Upper")
         outdir_l = os.path.join(outdir_patient_l,"Lower")
 
@@ -87,53 +116,71 @@ def main(args):
         if not os.path.exists(outdir_l):
             os.makedirs(outdir_l)
 
-        data_u = json.load(open(obj["path_landmarks_U"]))
-        json_file = pd.read_json(obj["path_landmarks_U"])
-        json_file.head()
-        markups = json_file.loc[0,'markups']
-        controlPoints = markups['controlPoints']
-        number_landmarks = len(controlPoints)
-        new_lst = []
-
-        for i in range(number_landmarks):
-            label = controlPoints[i]["label"]
-            # controlPoints[i]["label"] = "Upper_"+'_'.join(label.split("_")[1:])
-            controlPoints[i]["label"] = "Upper_"+label.split("_")[-1]
-            new_lst.append(controlPoints[i])
-        
-        data_u['markups'][0]['controlPoints'] = new_lst
-        
-        with open(os.path.join(outdir_u,f'Upper_{patient_id}.json'),'w') as json_file:
-            json.dump(data_u,json_file,indent=4)  
-
-        data_l = json.load(open(obj["path_landmarks_L"]))
-        json_file = pd.read_json(obj["path_landmarks_L"])
-        json_file.head()
-        markups = json_file.loc[0,'markups']
-        controlPoints = markups['controlPoints']
-        number_landmarks = len(controlPoints)
-        new_lst = []
-
-        for i in range(number_landmarks):
-            label = controlPoints[i]["label"]
-            # controlPoints[i]["label"] = "Upper_"+'_'.join(label.split("_")[1:])
-            controlPoints[i]["label"] = "Lower_"+label.split("_")[-1]
-            new_lst.append(controlPoints[i])
-
-        data_l['markups'][0]['controlPoints'] = new_lst
-       
-        with open(os.path.join(outdir_l,f'Lower_{patient_id}.json'),'w') as json_file:
-            json.dump(data_l,json_file,indent=4)
-        
 
         shutil.copy(obj['path_model_L'],outdir_l)
         dst_file_L = os.path.join(outdir_l,os.path.basename(obj['path_model_L']))
-        new_dst_file_name_L = os.path.join(outdir_l, f'Lower_{patient_id}.vtk')
+        new_dst_file_name_L = os.path.join(outdir_l, f'Lower_P{patient_id}.vtk')
         os.rename(dst_file_L, new_dst_file_name_L)#rename
-        shutil.copy(obj['path_model_U'],outdir_u)
-        dst_file_U = os.path.join(outdir_u,os.path.basename(obj['path_model_U']))
-        new_dst_file_name_U = os.path.join(outdir_u, f'Upper_{patient_id}.vtk')
-        os.rename(dst_file_U, new_dst_file_name_U)#rename
+
+        shutil.copy(obj['path_landmarks_L'],outdir_l)
+        dst_file_L = os.path.join(outdir_l,os.path.basename(obj['path_landmarks_L']))
+        new_dst_file_name_L = os.path.join(outdir_l, f'Lower_P{patient_id}.json')
+        os.rename(dst_file_L, new_dst_file_name_L)#rename
+
+        # shutil.copy(obj['path_model_U'],outdir_u)
+        # dst_file_U = os.path.join(outdir_u,os.path.basename(obj['path_model_U']))
+        # new_dst_file_name_U = os.path.join(outdir_u, f'Upper_{patient_id}.vtk')
+        # os.rename(dst_file_U, new_dst_file_name_U)#rename
+
+        patient_id += 1
+
+        # data_u = json.load(open(obj["path_landmarks_U"]))
+        # json_file = pd.read_json(obj["path_landmarks_U"])
+        # json_file.head()
+        # markups = json_file.loc[0,'markups']
+        # controlPoints = markups['controlPoints']
+        # number_landmarks = len(controlPoints)
+        # new_lst = []
+
+        # for i in range(number_landmarks):
+        #     label = controlPoints[i]["label"]
+        #     # controlPoints[i]["label"] = "Upper_"+'_'.join(label.split("_")[1:])
+        #     controlPoints[i]["label"] = "Upper_"+label.split("_")[-1]
+        #     new_lst.append(controlPoints[i])
+        
+        # data_u['markups'][0]['controlPoints'] = new_lst
+        
+        # with open(os.path.join(outdir_u,f'Upper_{patient_id}.json'),'w') as json_file:
+        #     json.dump(data_u,json_file,indent=4)  
+
+        # data_l = json.load(open(obj["path_landmarks_L"]))
+        # json_file = pd.read_json(obj["path_landmarks_L"])
+        # json_file.head()
+        # markups = json_file.loc[0,'markups']
+        # controlPoints = markups['controlPoints']
+        # number_landmarks = len(controlPoints)
+        # new_lst = []
+
+        # for i in range(number_landmarks):
+        #     label = controlPoints[i]["label"]
+        #     # controlPoints[i]["label"] = "Upper_"+'_'.join(label.split("_")[1:])
+        #     controlPoints[i]["label"] = "Lower_"+label.split("_")[-1]
+        #     new_lst.append(controlPoints[i])
+
+        # data_l['markups'][0]['controlPoints'] = new_lst
+       
+        # with open(os.path.join(outdir_l,f'Lower_{patient_id}.json'),'w') as json_file:
+        #     json.dump(data_l,json_file,indent=4)
+        
+
+        # shutil.copy(obj['path_model_L'],outdir_l)
+        # dst_file_L = os.path.join(outdir_l,os.path.basename(obj['path_model_L']))
+        # new_dst_file_name_L = os.path.join(outdir_l, f'Lower_{patient_id}.vtk')
+        # os.rename(dst_file_L, new_dst_file_name_L)#rename
+        # shutil.copy(obj['path_model_U'],outdir_u)
+        # dst_file_U = os.path.join(outdir_u,os.path.basename(obj['path_model_U']))
+        # new_dst_file_name_U = os.path.join(outdir_u, f'Upper_{patient_id}.vtk')
+        # os.rename(dst_file_U, new_dst_file_name_U)#rename
 
 ###################################################################################################################################
 #                                                   FOR UPPER JAW                                                                 #
@@ -302,9 +349,12 @@ if __name__ == '__main__':
     input_param = parser.add_argument_group('input files')
     # input_param.add_argument('--dir_project', type=str, help='Directory with all the project', default='/Users/luciacev-admin/Documents/AutomatedLandmarks')
     # input_param.add_argument('--dir_data', type=str, help='Input directory with 3D images', default=parser.parse_args().dir_project+'/fly-by-cnn/data')
-    input_param.add_argument('--dir_data', type=str, help='Input directory with 3D images', default='/Users/luciacev-admin/Desktop/data_ALIDDM')
+    input_param.add_argument('--dir_data', type=str, help='Input directory with 3D images', default='/Users/luciacev-admin/Desktop/data_ALIDDM_ADJ')
     input_param.add_argument('--landmarks_dir', type=str, help='landmarks directory', default=parser.parse_args().dir_data+'/landmarks')
     input_param.add_argument('--model_dir', type=str, help='model file directory', default=parser.parse_args().dir_data+'/teeth_gum')
+    
+    input_param.add_argument('--new_landmarks_dir', type=str, help='new landmarks directory', default=parser.parse_args().dir_data+'/New_data_land_Adjusted2')
+    input_param.add_argument('--new_models_dir', type=str, help='new_model file directory', default=parser.parse_args().dir_data+'/new_data_lab_v2')
 
     output_params = parser.add_argument_group('Output parameters')
     output_params.add_argument('--out', type=str, help='Output directory', default=parser.parse_args().dir_data+'/data')
