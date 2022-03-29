@@ -100,7 +100,7 @@ def ResultAccuracy(fiducial_dir):
             baseName = os.path.basename(img_fn)
             patient = os.path.dirname(os.path.dirname(img_fn))
             num_label_pred = os.path.basename(img_fn).split('_')[1][1:]
-            # print(baseName,patient)
+            print(baseName,patient,num_label_pred)
             if patient not in patients.keys():
                 patients[patient] = {"Upper":{},"Lower":{}}
             if "_Pred" in baseName:
@@ -121,8 +121,8 @@ def ResultAccuracy(fiducial_dir):
     nbr_pred = 0
     error_lst = []
     f = open(os.path.join(fiducial_dir,"Result.txt"),'w')
-    # print(patients['/Users/luciacev-admin/Desktop/test_accuracy/data/Patients /P10'])
-    
+    #  print(patients['/Users/luciacev-admin/Desktop/test_accuracy/data/Patients /P10'])
+    print(patients)
     for patient,fiducials in patients.items():
         print("Results for patient",patient)
         f.write("Results for patient "+ str(patient)+"\n")
@@ -164,6 +164,7 @@ def ResultAccuracy(fiducial_dir):
     f.close
     return error_dic
 
+
 def PlotResults(data):
     sns.set_theme(style="whitegrid")
     # data = {"labels":["B","B","N","N","B","N"], "error":[0.1,0.5,1.6,1.9,0.3,1.3]}    
@@ -172,17 +173,23 @@ def PlotResults(data):
     ax = sns.violinplot(x="labels", y="error", data=data, cut=0)
     plt.show()
 
-def remove_extra_faces(num_faces,RI,label):
+def remove_extra_faces(F,num_faces,RI,label):
     last_num_faces =[]
+    # print(num_faces)
+    # print(RI)
     for face in num_faces:
-        print(label)
-        print(face.item())
-        print(RI.shape)
-        print(RI.squeeze(0)[int(face.item())])
-        if RI.squeeze(0)[int(face.item())] == label:
-            print("perfecr")
-            last_num_faces.append(face)
-        else:
-            print('wrong label')
+        # print('label :',label)
+        # print('face :',face.item())
+        # print('RI.shape :',RI.shape)
+        # print(RI.squeeze(0)[int(face.item())])
+        # print(F.shape)
+        # print(F.squeeze(0)[int(face.item())])
+        vertex_color = F.squeeze(0)[int(face.item())]
+        for vert in vertex_color:
+            if RI.squeeze(0)[vert] == label:
+                # print("perfect")
+                last_num_faces.append(face)
+            else:
+                print('wrong label')
     return last_num_faces
         

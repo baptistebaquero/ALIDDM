@@ -1,5 +1,4 @@
 import argparse
-import datetime
 from unittest.mock import patch
 from ALIDDM_utils import *
 from classes import *
@@ -20,7 +19,10 @@ from monai.transforms import AsDiscrete
 def main(args):
     
     #GEN CSV
+    # if not os.path.exists(args.):
+    #     os.makedirs(out_path)
     # GenDataSplitCSV(args.dir_patients,args.csv_file,args.val_percentage,args.test_percentage)
+    # SplitCSV_train_Val('/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/data_split/Upper/data_split.csv',0.13)
     phong_renderer,mask_renderer = GenPhongRenderer(args.image_size,args.blur_radius,args.faces_per_pixel,GV.DEVICE)
 
     GV.SELECTED_JAW = args.jaw
@@ -28,7 +30,7 @@ def main(args):
     df = pd.read_csv(args.csv_file)
 
     train_data,val_data = GenDataSet(df,args.dir_patients,FlyByDataset,GV.DEVICE,args.label)
-
+    # print(train_data)
     train_dataloader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True, collate_fn=pad_verts_faces)
     val_dataloader = DataLoader(val_data, batch_size=args.batch_size, shuffle=True, collate_fn=pad_verts_faces)
 
@@ -57,6 +59,7 @@ def main(args):
     writer = SummaryWriter()
     
     for epoch in range(args.max_epoch):
+        # label = random.choice(args.label)
         Training(
             train_dataloader=train_dataloader,
             train_data=train_data,
@@ -67,7 +70,7 @@ def main(args):
             optimizer=optimizer,
             loss_function=loss_function,
             label=args.label,
-            writer=writer
+            writer=writer,
             )
 
         if (epoch) % args.val_freq == 0:        
@@ -90,99 +93,26 @@ def main(args):
                 dir_models=args.dir_models
                 )
 
-    #         if early_stopping == True:
-    #             break
 
-
-
-
-    # for batch, (S, V, F, RI, CN, LP, MR, SF) in enumerate(train_dataloader):
-
-    #     meshes = Gen_mesh_patch(S,V,F,CN,LP,args.label)
-    #     dic = {"teeth_landmarks_meshes": meshes}
-    #     plot_fig(dic)
-
-
-    #     print(LP)
-    #     # print(V.shape)
-    #     # print(CN.shape)
-    #     position_agent = agent.position_agent(RI,V,args.label,GV.DEVICE)
-
-    #     verts_rgb = torch.ones_like(CN)[None].squeeze(0)  # (1, V, 3)
-    #     verts_rgb[:,:, 0] *= 1  # red
-    #     verts_rgb[:,:, 1] *= 0  # green
-    #     verts_rgb[:,:, 2] *= 0  # blue
-    #     CN = verts_rgb
-    #     patch_region = Gen_patch(V, CN, LP, args.label, 0.02)
-    #     print(patch_region,patch_region.shape)
-    #     meshes = Generate_Mesh(V,F,patch_region,lst_landmarks,GV.DEVICE)
-      
-
-
-
-
-    #     print(patch_region.shape)
-    #     textures = TexturesVertex(verts_features=patch_region)
-    #     meshes = Meshes(
-    #         verts=V,   
-    #         faces=F, 
-    #         textures=textures
-    #     ).to(GV.DEVICE) # batchsize
-        
-    #     dic = {"teeth_landmarks_meshes": meshes}
-    #     plot_fig(dic)
-    #     position_agent = agent.position_agent(RI,V,args.label,GV.DEVICE)
-    #     PlotMeshAndSpheres(meshes,position_agent,0.02,[1,1,1])       
-
-    #     img_batch =  agent.GetView(meshes)
-    #     print(img_batch.shape)
-    #     PlotAgentViews(img_batch.cpu())
-
-
-    #     lst_landmarks = Get_lst_landmarks(LP,GV.LABEL[args.label])
-    #     meshes_2 = Generate_land_Mesh(lst_landmarks,GV.DEVICE)
-    #     img_batch_2 =  agent.GetView(meshes_2)
-    #     PlotAgentViews(img_batch_2)
-       
-    #     patch_region = Gen_patch(V, RI, LP, args.label, 0.01)
-    #     meshes = Generate_Mesh(V,F,CN,lst_landmarks,GV.DEVICE)
-    #     img_batch =  agent.GetView(meshes)
-
-    #     PlotAgentViews(img_batch.cpu())
-
-
-        
-
-    # print(agent.positions)
-
-    # PlotMeshAndSpheres(meshes,agent.positions,0.02,[1,0,0])
-    # PlotAgentViews(agent.GetView(meshes))
-
-    # PlotDatasetWithLandmark(target,train_dataloader)
-    
-    # print(landmark_pos)
-
-    # print(f"train completed, best_metric: {best_metric:.4f} at epoch: {best_metric_epoch}")
-    # writer.close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Automatic Landmark Identification on Digital Dental Model', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     input_param = parser.add_argument_group('input files')
-    # input_param.add_argument('--dir_project', type=str, help='dataset directory', default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM')
-    input_param.add_argument('--dir_project', type=str, help='dataset directory', default='/Users/luciacev-admin/Desktop/ALIDDM_BENCHMARK')
+    input_param.add_argument('--dir_project', type=str, help='dataset directory', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM')
     input_param.add_argument('--dir_data', type=str, help='Input directory with all the data', default=parser.parse_args().dir_project+'/data')
-    input_param.add_argument('--dir_patients', type=str, help='Input directory with the meshes',default=parser.parse_args().dir_data+'/patients')
-    input_param.add_argument('--csv_file', type=str, help='CSV of the data split',default=parser.parse_args().dir_data+'/data_split.csv')
+    input_param.add_argument('--dir_patients', type=str, help='Input directory with the meshes',default=parser.parse_args().dir_data+'/patients_u')
+    input_param.add_argument('--csv_file', type=str, help='CSV of the data split',default=parser.parse_args().dir_data+'/data_split/Upper/data_split.csv')
 
-    # input_group.add_argument('--dir_cash', type=str, help='Output directory of the training',default=parser.parse_args().dir_data+'/Cash')
-    # input_param.add_argument('--dir_model', type=str, help='Output directory of the training',default= parser.parse_args().dir_data+'/ALI_models_'+datetime.datetime.now().strftime("%Y_%d_%m"))
 
     #Environment
-    input_param.add_argument('-j','--jaw',type=str,help="Prepare the data for uper or lower landmark training (ex: L U)", default="L")
+    input_param.add_argument('-j','--jaw',type=str,help="Prepare the data for uper or lower landmark training (ex: L U)", default="U")
     input_param.add_argument('-sr', '--sphere_radius', type=float, help='Radius of the sphere with all the cameras', default=0.2)
-    input_param.add_argument('--label', type=str, help='label of the teeth',default="18")
-   
+    # input_param.add_argument('--label', type=list, help='label of the teeth',default=(["18","19","20","21","22","23","24","25","26","27","28","29","30","31"]))
+    # input_param.add_argument('--label', type=list, help='label of the teeth',default=(["2","3","4","5","6","7","8","9","10","11","12","13","14","15"]))
+
+    input_param.add_argument('--label', type=str, help='label of the teeth',default="15")
+
     #Training data
     input_param.add_argument('--image_size',type=int, help='size of the picture', default=224)
     input_param.add_argument('--blur_radius',type=int, help='blur raius', default=0)
@@ -205,7 +135,7 @@ if __name__ == '__main__':
     # parser.add_argument('--nbr_pictures',type=int,help='number of pictures per tooth', default=5)
    
     output_params = parser.add_argument_group('Output parameters')
-    # output_params.add_argument('--dir_models', type=str, help='Output directory with all the networks',default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM/data/best_models')
+    output_params.add_argument('--dir_models', type=str, help='Output directory with all the networks',default=parser.parse_args().dir_data+'/models/Upper/models_csv')
 
     
     args = parser.parse_args()

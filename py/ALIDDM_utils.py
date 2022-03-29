@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 import random
 import vtk
 import torch
-
+import pandas as pd
 import GlobVar as GV
 from GlobVar import SELECTED_JAW
 from utils import ReadSurf
@@ -82,8 +82,8 @@ def GenDataSet(df,dir_patients,flyBy,device,label):
     df_train = df_train.loc[df_train['jaw'] == SELECTED_JAW]
     df_val = df.loc[df['for'] == "val"]
     df_val = df_val.loc[df_val['jaw'] == SELECTED_JAW]
-    df_train = df_train.loc[df_train[label] == 1]
-    df_val = df_val.loc[df_val[label] == 1]
+    # df_train = df_train.loc[df_train[label] == 1]
+    # df_val = df_val.loc[df_val[label] == 1]
 
     # print(df.loc[df['for'] == "test"])
 
@@ -139,6 +139,24 @@ def generate_sphere_mesh(center,radius,device,color = [1,1,1]):
     
     return mesh,verts_teeth,faces_teeth,verts_rgb.squeeze(0)
 
+def SplitCSV_train_Val(csvPath,val_p):
+    df = pd.read_csv(csvPath)
+    df_test = df.loc[df['for'] == "test"]
+    df_train = df.loc[df['for'] == "train"]
+    samples = int(len(df_train.index)*val_p)
+
+    for i in range(samples):
+        random_num = random.randint(1, 131)
+        # print(random_num)
+        df_train['for'][random_num] = "val"
+
+    # df.to_csv(csvPath,index=False)
+
+    df_fold = pd.concat([df_train, df_test])
+    # print(df_fold['for'])
+    df_fold.to_csv(csvPath,index=False)
+    
+
 def GenDataSplitCSV(dir_data,csv_path,val_p,test_p):
     patient_dic = {}
     normpath = os.path.normpath("/".join([dir_data, '**', '']))
@@ -172,7 +190,7 @@ def GenDataSplitCSV(dir_data,csv_path,val_p,test_p):
         "val":df_val,
         "test":df_test
         }
-
+    # print(data_dic)
     fieldnames = ['for','jaw','surf', 'landmarks']
     for lab in range(2,32):
         fieldnames.append(str(lab))
@@ -180,7 +198,7 @@ def GenDataSplitCSV(dir_data,csv_path,val_p,test_p):
     for type,dic in data_dic.items():
         for patient in dic:
             for jaw,data in patient.items():
-                if jaw == "L":
+                if jaw == "U":
                     rows = {
                         'for':type,
                         'jaw':jaw,

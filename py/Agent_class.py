@@ -31,14 +31,20 @@ from statistics import mean
 from scipy import linalg
 
 
+# icosahedron = CreateIcosahedron(1, 1)
+# sphere_points=[]
+# sphere_points = ([0,0,1],
+#                  np.array([0.5,0.,1.0])/linalg.norm([0.5,0.5,1.0]),
+#                  np.array([-0.5,0.,1.0])/linalg.norm([-0.5,-0.5,1.0]),
+#                  np.array([0,0.5,1])/linalg.norm([1,0,1]),
+#                  np.array([0,-0.5,1])/linalg.norm([0,1,1])
+#                 )
 
-icosahedron = CreateIcosahedron(1, 1)
-sphere_points=[]
-sphere_points = ([0,0,1],
-                 np.array([0.5,0.,1.0])/linalg.norm([0.5,0.5,1.0]),
-                 np.array([-0.5,0.,1.0])/linalg.norm([-0.5,-0.5,1.0]),
-                 np.array([0,0.5,1])/linalg.norm([1,0,1]),
-                 np.array([0,-0.5,1])/linalg.norm([0,1,1])
+sphere_points = ([0,0,-1],
+                 np.array([0.5,0.,-1])/linalg.norm([0.5,0.5,-1]),
+                 np.array([-0.5,0.,-1])/linalg.norm([-0.5,-0.5,-1]),
+                 np.array([0,0.5,-1])/linalg.norm([1,0,-1]),
+                 np.array([0,-0.5,-1])/linalg.norm([0,1,-1])
                 )
 # for pid in range(icosahedron.GetNumberOfPoints()):
 #     spoint = icosahedron.GetPoint(pid)
@@ -47,8 +53,8 @@ sphere_points = ([0,0,1],
 # got = itemgetter(0,4)(sphere_points)
 # CAMERA_POSITION = np.array(got)
 # print(sphere_points)
-CAMERA_POSITION = np.array(sphere_points)
 
+CAMERA_POSITION = np.array(sphere_points)
 
 class Agent:
     def __init__(
@@ -70,18 +76,22 @@ class Agent:
 
 
     def position_agent(self, text, vert, label, device):
-        # print(text)
-        # print(int(label))
+   
         final_pos = torch.empty((0)).to(device)
+        
         for mesh in range(len(text)):
-            index_pos_land = (text[mesh]==int(label)).nonzero(as_tuple=True)[0]
-            lst_pos = []
-            for index in index_pos_land:
-                lst_pos.append(vert[mesh][index])
-            position_agent = sum(lst_pos)/len(lst_pos)
-            final_pos = torch.cat((final_pos,position_agent.unsqueeze(0).to(device)),dim=0)
+            if int(label) in text[mesh]:
+                index_pos_land = (text[mesh]==int(label)).nonzero(as_tuple=True)[0]
+                lst_pos = []
+                for index in index_pos_land:
+                    lst_pos.append(vert[mesh][index])
+                position_agent = sum(lst_pos)/len(lst_pos)
+                final_pos = torch.cat((final_pos,position_agent.unsqueeze(0).to(device)),dim=0)
+            else:
+                final_pos = torch.cat((final_pos,torch.zeros((1,3)).to(device)),dim=0)
         # print(final_pos.shape)
         self.positions = final_pos
+        # print(self.positions)
         return self.positions
 
     

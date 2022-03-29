@@ -11,16 +11,27 @@ from monai.networks.nets import UNet
 import cv2 as cv
 from monai.transforms import AsDiscrete
 from monai.data import decollate_batch
-
+import shutil
 
 def main(args):
+    if args.jaw == "U":
+        lst_label = args.label_U
+        dir_model = args.model_U
+        # csv_file = args.csv_file_U
+    else :
+        lst_label = args.label_L
+        dir_model = args.model_L
+        # csv_file = args.csv_file_L
+    
     vtk_normpath = os.path.normpath("/".join([args.vtk_dir,'**','']))
     lst_vtkfiles = []
     for vtkfile in sorted(glob.iglob(vtk_normpath, recursive=True)):
         if os.path.isfile(vtkfile) and True in [ext in vtkfile for ext in [".vtk"]]:
             lst_vtkfiles.append(vtkfile)
-    # print(lst_vtkfiles)
     
+    # print(lst_vtkfiles)
+
+
     # df = pd.read_csv(args.csv_file)
     # df_test = df.loc[df['for'] == "test"]
     # # print(df_test['surf'])
@@ -28,19 +39,23 @@ def main(args):
     #     full_vtkfile = args.patient_path + '/' + vtkfile
     #     # print(full_vtkfile)
     #     lst_vtkfiles.append(full_vtkfile)
+    
     # print(lst_vtkfiles)
     
+
+
     for path_vtk in lst_vtkfiles:
         # print(path_vtk)
         num_patient = os.path.basename(path_vtk).split('.')[0].split('_')[2]
         print(f"prediction for patient {num_patient} :", path_vtk )
         groupe_data = {}
+        # model = args.model
         
-        for label in args.label:
-            print('label :',label)
+        for label in lst_label:
             # print(len(lst_vtkfiles))
-            model = f'/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM/data/best_models/best_metric_model_{label}.pth'
-            print("loading model :" , model)
+            print(dir_model)
+            model = os.path.join(dir_model,f"best_metric_model_{label}.pth")
+            print("Loading model :", model, "for patient :", num_patient, "label :", label)
             # print(num_patient)
             phong_renderer,mask_renderer = GenPhongRenderer(args.image_size,args.blur_radius,args.faces_per_pixel,GV.DEVICE)
 
@@ -124,7 +139,7 @@ def main(args):
                 index_label_land_g = (pred_data==2.).nonzero(as_tuple=False) #torch.Size([6252, 5])
                 index_label_land_b = (pred_data==3.).nonzero(as_tuple=False) #torch.Size([6252, 5])
                 
-                # print(index_label_land)
+                # print(index_label_land)num_patient
                 # print(tens_pix_to_face_model.shape)
                 # recover the face in my mesh 
                 num_faces_r = []
@@ -144,24 +159,24 @@ def main(args):
                 
                 # print(len(num_faces_r),len(num_faces_g),len(num_faces_b))
                 
-                # last_num_faces_r = remove_extra_faces(num_faces_r,RI,label)
-                # last_num_faces_g = remove_extra_faces(num_faces_g,RI,label)
-                # last_num_faces_b = remove_extra_faces(num_faces_b,RI,label) 
+                last_num_faces_r = remove_extra_faces(F,num_faces_r,RI,int(label))
+                last_num_faces_g = remove_extra_faces(F,num_faces_g,RI,int(label))
+                last_num_faces_b = remove_extra_faces(F,num_faces_b,RI,int(label))
                 
                 # print(len(last_num_faces_r),len(last_num_faces_g),len(last_num_faces_b))
             
                 
                 # print(num_faces_g)
                 dico_rgb = {}
-                dico_rgb[f'{GV.LABEL[label][0]}'] = num_faces_r
-                dico_rgb[f'{GV.LABEL[label][1]}'] = num_faces_g
-                dico_rgb[f'{GV.LABEL[label][2]}'] = num_faces_b
+                dico_rgb[f'{GV.LABEL[label][0]}'] = last_num_faces_r
+                dico_rgb[f'{GV.LABEL[label][1]}'] = last_num_faces_g
+                dico_rgb[f'{GV.LABEL[label][2]}'] = last_num_faces_b
                 
                 # recover position 
                 # print(num_faces)
 
                     
-                
+                # print(dico_rgb)
                 
                 locator = vtk.vtkOctreePointLocator()
                 locator.SetDataSet(surf_unit)
@@ -183,21 +198,36 @@ def main(args):
                     for vert in list_face_id:
                         # print(V[0][vert])
                         vert_coord += V[0][vert]
+                    if len(list_face_id) != 0:
+                        landmark_pos = vert_coord/len(list_face_id)
+                        pid = locator.FindClosestPoint(landmark_pos.cpu().numpy())
+                        closest_landmark_pos = torch.tensor(surf_unit.GetPoint(pid))
 
-                    landmark_pos = vert_coord/len(list_face_id)
-                    pid = locator.FindClosestPoint(landmark_pos.cpu().numpy())
-                    closest_landmark_pos = torch.tensor(surf_unit.GetPoint(pid))
-
-                    upscale_landmark_pos = Upscale(closest_landmark_pos,mean_arr,scale_factor)
-                    final_landmark_pos = upscale_landmark_pos
-                    # print(final_landmark_pos)
-                    
-                    coord_dic = {"x":final_landmark_pos[0],"y":final_landmark_pos[1],"z":final_landmark_pos[2]}
-                    groupe_data[f'{land_name}']=coord_dic
+                        upscale_landmark_pos = Upscale(closest_landmark_pos,mean_arr,scale_factor)
+                        final_landmark_pos = upscale_landmark_pos
+                        # print(final_landmark_pos)
+                        
+                        coord_dic = {"x":final_landmark_pos[0],"y":final_landmark_pos[1],"z":final_landmark_pos[2]}
+                        groupe_data[f'{land_name}']=coord_dic
                 # print(groupe_data)
         lm_lst = GenControlePoint(groupe_data)
         # print(lm_lst)
-        WriteJson(lm_lst,os.path.join(args.out_path,f"Lower_P{num_patient}_new_Pred.json"))
+        out_path = os.path.join(args.out_path,f"P{num_patient}")
+        if not os.path.exists(out_path):
+            os.makedirs(out_path)
+        # print(out_path)
+        out_path_jaw = os.path.join(out_path,os.path.basename(path_vtk).split('.')[0].split('_')[0])
+        # print(out_path_jaw)
+        if not os.path.exists(out_path_jaw):
+            os.makedirs(out_path_jaw)
+        # print(os.path.dirname(path_vtk))
+        # print(out_path)
+        copy_file = os.path.join(out_path_jaw,os.path.basename(path_vtk))
+        final_out_path = shutil.copy(path_vtk,copy_file)
+        # final_out_path = shutil.copytree(path_vtk,out_path_L)
+
+        # print(final_out_path)
+        WriteJson(lm_lst,os.path.join(out_path_jaw,f"Upper_P{num_patient}_Pred.json"))
 
 
 
@@ -235,21 +265,23 @@ if __name__ == '__main__':
 
     input_param = parser.add_argument_group('input files')
     # input_param.add_argument('--model_teeth', type=str, help='path of 3D model of the teeth of 1 patient', default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM/data/patients/P20/Lower/Lower_P20.vtk')
-    input_param.add_argument('--vtk_dir', type=str, help='path of 3D model of the teeth of 1 patient', default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM/new_data_lab_v2')
-    # input_param.add_argument('--csv_file', type=str, help='path of the csv', default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM/data/data_split.csv')
-    # input_param.add_argument('--patient_path', type=str, help='path of the patient folder', default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM/data/patients')
+    input_param.add_argument('--vtk_dir', type=str, help='path of 3D model of the teeth of 1 patient', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/Upper_jaw_lab')
+    # input_param.add_argument('--csv_file_L', type=str, help='path of the csv', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/data_splitfold1.csv')
+    # input_param.add_argument('--csv_file_U', type=str, help='path of the csv', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/data_split/Upper')
+    # input_param.add_argument('--patient_path', type=str, help='path of the patient folder', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/patients')
 
     # input_param.add_argument('--model_teeth', type=str, help='path of 3D model of the teeth of 1 patient', default='/Users/luciacev-admin/Desktop/data_ALIDDM/data/Patients /P3/Lower/Lower_P3.vtk')
     # input_param.add_argument('--jsonfile', type=str, help='path of jsonfile of the teeth of 1 patient', default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM/data/patients/P10/Lower/Lower_P10.json')
 
-    # input_group.add_argument('--dir_cash', type=str, help='Output directory of the training',default=parser.parse_args().dir_data+'/Cash')
-    # input_param.add_argument('--model', type=str, help='loading of model', default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM/data/best_models/best_metric_model_24.pth')
+    # input_param.add_argument('--dir_model', type=str, help='loading of model', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/models/Lower/unique_model_Lower_csv1/best_metric_model.pth')
+    input_param.add_argument('--model_U', type=str, help='loading of model', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/models/Upper/models_csv/')
+    input_param.add_argument('--model_L', type=str, help='loading of model', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/models/Lower/models_csv/')
 
     #Environment
-    input_param.add_argument('-j','--jaw',type=str,help="Prepare the data for uper or lower landmark training (ex: L U)", default="L")
+    input_param.add_argument('-j','--jaw',type=str,help="Prepare the data for uper or lower landmark training (ex: L U)", default="U")
     input_param.add_argument('-sr', '--sphere_radius', type=float, help='Radius of the sphere with all the cameras', default=0.2)
-    input_param.add_argument('--label', type=list, help='label of the teeth',default=["18","19","20","21","22","23","24","25","26","27","28","29","30","31"])
-    # input_param.add_argument('--label', type=list, help='label of the teeth',default=["18","21","22","23","24"])
+    input_param.add_argument('--label_L', type=list, help='label of the teeth',default=["18","19","20","21","22","23","24","25","26","27","28","29","30","31"])
+    input_param.add_argument('--label_U', type=list, help='label of the teeth',default=(["2","3","4","5","6","7","8","9","10","11","12","13","14","15"]))
 
 
     #Prediction data
@@ -257,7 +289,7 @@ if __name__ == '__main__':
     input_param.add_argument('--blur_radius',type=int, help='blur raius', default=0)
     input_param.add_argument('--faces_per_pixel',type=int, help='faces per pixels', default=1)
  
-    input_param.add_argument('--out_path',type=str, help='path where jsonfile is saved', default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM/data/new_out_json_v2')
+    input_param.add_argument('--out_path',type=str, help='path where jsonfile is saved', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/marcela')
 
     
     args = parser.parse_args()
