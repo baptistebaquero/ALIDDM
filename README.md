@@ -9,7 +9,8 @@ ALIDDM is an approach to capture 2D views from intra oral scan and use the gener
 It scales the mesh to the unit sphere, it captures 2D views from 5 different viewpoints, and it's doing this for each tooth. For each camera the neural  network segment patches on the surface to finally recover the final position after an average of every coordinates point in the patch and an upsampling step to the original scale.
 
 
-<img width="575" alt="results" src="https://user-images.githubusercontent.com/83285614/160682839-c33312b1-0e55-48e5-8b9b-844932e4d48e.png">
+<img width="575" alt="results" src="https://user-images.githubusercontent.com/83285614/160682839-c33312b1-0e55-48e5-8b9b-844932e4d48e.png" title="results and accuracy">
+<img width="549" alt="training" src="https://user-images.githubusercontent.com/83285614/160683370-b31110b1-ecc6-4f1d-9e35-e79c80a1daca.png"title= "Patches' prediction" >
 
 
 ## Running the training code:
