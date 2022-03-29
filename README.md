@@ -11,5 +11,6 @@ It scales the mesh to the unit sphere, it captures 2D views from 5 different vie
 
 ![plot](/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/Documentation/results.png)
 
-
+![Alt text](/posts/path/to/img.jpg "Optional title")
+<img src="/path/to/img.jpg" alt="Alt text" title="Optional title">
 ## Running the code:
