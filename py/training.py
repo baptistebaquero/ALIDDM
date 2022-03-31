@@ -46,7 +46,7 @@ def Training(train_dataloader,train_data,agent,epoch,nb_epoch,model,optimizer,lo
                     textures=textures
                     ).to(GV.DEVICE)
         
-        agent.position_agent(RI,V,label,GV.DEVICE)
+        agent.position_agent(RI,V,label)
 
         images =  agent.GetView(meshes) #[batch,num_ima,channels,size,size]
         
@@ -102,7 +102,7 @@ def Validation(val_dataloader,epoch,nb_epoch,model,agent,label,dice_metric,best_
                         textures=textures
                         )
 
-            agent.position_agent(RI,V,label,GV.DEVICE)
+            agent.position_agent(RI,V,label)
 
             images =  agent.GetView(meshes)
             

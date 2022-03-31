@@ -1,7 +1,10 @@
 import torch
 import os
+import numpy as np
+from scipy import linalg
 
-DEVICE = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+global DEVICE 
+# DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 Lower = []
@@ -23,6 +26,14 @@ LANDMARKS = {
 global SELECTED_JAW
 SELECTED_JAW = "L"
 
+sphere_points = ([0,0,1],
+                np.array([0.5,0.,1.0])/linalg.norm([0.5,0.5,1.0]),
+                np.array([-0.5,0.,1.0])/linalg.norm([-0.5,-0.5,1.0]),
+                np.array([0,0.5,1])/linalg.norm([1,0,1]),
+                np.array([0,-0.5,1])/linalg.norm([0,1,1])
+                )
+global CAMERA_POSITION 
+CAMERA_POSITION = np.array(sphere_points)
 
 LABEL = {
     "15" : LANDMARKS["U"][0:3],
@@ -55,38 +66,6 @@ LABEL = {
     "30" : LANDMARKS["L"][36:39],
     "31" : LANDMARKS["L"][39:42],
 
-    
-
-
-    # "2" : ['Lower_O-1','Lower_O-2','Lower_O-3'],
-    # "3" : ['Lower_O-4','Lower_O-5','Lower_O-6'],
-    # "4" : ['Lower_O-7','Lower_O-8','Lower_O-9'],
-    # "5" : ['Lower_O-10','Lower_O-11','Lower_O-12'],
-    # "6" : ['Lower_O-13','Lower_O-14','Lower_O-15'],
-    # "7" : ['Lower_O-16','Lower_O-17','Lower_O-18'],
-    # "8" : ['Lower_O-19','Lower_O-20','Lower_O-21'],
-    # "9" : ['Lower_O-22','Lower_O-23','Lower_O-24'],
-    # "10" : ['Lower_O-25','Lower_O-26','Lower_O-27'],
-    # "11" : ['Lower_O-28','Lower_O-29','Lower_O-30'],
-    # "12" : ['Lower_O-31','Lower_O-32','Lower_O-33'],
-    # "13" : ['Lower_O-34','Lower_O-35','Lower_O-36'],
-    # "14" : ['Lower_O-37','Lower_O-38','Lower_O-39'],
-    # "15" : ['Lower_O-40','Lower_O-41','Lower_O-42'],
-
-    # "18" : ['Upper_O-1','Upper_O-2','Upper_O-3'],
-    # "19" : ['Upper_O-4','Upper_O-5','Upper_O-6'],
-    # "20" : ['Upper_O-7','Upper_O-8','Upper_O-9'],
-    # "21" : ['Upper_O-10','Upper_O-11','Upper_O-12'],
-    # "22" : ['Upper_O-13','Upper_O-14','Upper_O-15'],
-    # "23" : ['Upper_O-16','Upper_O-17','Upper_O-18'],
-    # "24" : ['Upper_O-19','Upper_O-20','Upper_O-21'],
-    # "25" : ['Upper_O-22','Upper_O-23','Upper_O-24'],
-    # "26" : ['Upper_O-25','Upper_O-26','Upper_O-27'],
-    # "27" : ['Upper_O-28','Upper_O-29','Upper_O-30'],
-    # "28" : ['Upper_O-31','Upper_O-32','Upper_O-33'],
-    # "29" : ['Upper_O-34','Upper_O-35','Upper_O-36'],
-    # "30" : ['Upper_O-37','Upper_O-38','Upper_O-39'],
-    # "31" : ['Upper_O-40','Upper_O-41','Upper_O-42']
 }
 
 

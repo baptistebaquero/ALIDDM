@@ -15,9 +15,30 @@ from torch.optim import Adam
 from monai.metrics import DiceMetric
 # from pytorchtools import EarlyStopping
 from monai.transforms import AsDiscrete
+# import numpy as np
+from scipy import linalg
+
 
 def main(args):
-    
+    sphere_points_L = ([0,0,1],
+                    np.array([0.5,0.,1.0])/linalg.norm([0.5,0.5,1.0]),
+                    np.array([-0.5,0.,1.0])/linalg.norm([-0.5,-0.5,1.0]),
+                    np.array([0,0.5,1])/linalg.norm([1,0,1]),
+                    np.array([0,-0.5,1])/linalg.norm([0,1,1])
+                    )
+    sphere_points_U = ([0,0,-1],
+                    np.array([0.5,0.,-1])/linalg.norm([0.5,0.5,-1]),
+                    np.array([-0.5,0.,-1])/linalg.norm([-0.5,-0.5,-1]),
+                    np.array([0,0.5,-1])/linalg.norm([1,0,-1]),
+                    np.array([0,-0.5,-1])/linalg.norm([0,1,-1])
+                    )
+    GV.SELECTED_JAW = args.jaw
+    GV.DEVICE = torch.device(f"cuda:{args.num_device}" if torch.cuda.is_available() else "cpu")
+    if GV.SELECTED_JAW == "L":
+        GV.CAMERA_POSITION = np.array(sphere_points_L)
+    else:
+        GV.CAMERA_POSITION = np.array(sphere_points_U)
+
     #GEN CSV
     # if not os.path.exists(args.):
     #     os.makedirs(out_path)
@@ -25,12 +46,9 @@ def main(args):
     # SplitCSV_train_Val('/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/data_split/Upper/data_split.csv',0.13)
     phong_renderer,mask_renderer = GenPhongRenderer(args.image_size,args.blur_radius,args.faces_per_pixel,GV.DEVICE)
 
-    GV.SELECTED_JAW = args.jaw
-
     df = pd.read_csv(args.csv_file)
 
     train_data,val_data = GenDataSet(df,args.dir_patients,FlyByDataset,GV.DEVICE,args.label)
-    # print(train_data)
     train_dataloader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True, collate_fn=pad_verts_faces)
     val_dataloader = DataLoader(val_data, batch_size=args.batch_size, shuffle=True, collate_fn=pad_verts_faces)
 
@@ -38,7 +56,6 @@ def main(args):
     agent = Agent(
         renderer=phong_renderer,
         renderer2=mask_renderer,
-        device=GV.DEVICE,
         radius=args.sphere_radius,
     )
 
@@ -101,19 +118,20 @@ if __name__ == '__main__':
     input_param = parser.add_argument_group('input files')
     input_param.add_argument('--dir_project', type=str, help='dataset directory', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM')
     input_param.add_argument('--dir_data', type=str, help='Input directory with all the data', default=parser.parse_args().dir_project+'/data')
-    input_param.add_argument('--dir_patients', type=str, help='Input directory with the meshes',default=parser.parse_args().dir_data+'/patients_u')
-    input_param.add_argument('--csv_file', type=str, help='CSV of the data split',default=parser.parse_args().dir_data+'/data_split/Upper/data_split.csv')
+    input_param.add_argument('--dir_patients', type=str, help='Input directory with the meshes',default=parser.parse_args().dir_data+'/patients')
+    input_param.add_argument('--csv_file', type=str, help='CSV of the data split',default=parser.parse_args().dir_data+'/data_split/Lower/data_splitfold1.csv')
 
 
     #Environment
-    input_param.add_argument('-j','--jaw',type=str,help="Prepare the data for uper or lower landmark training (ex: L U)", default="U")
+    input_param.add_argument('-j','--jaw',type=str,help="Prepare the data for uper or lower landmark training (ex: L U)", default="L")
     input_param.add_argument('-sr', '--sphere_radius', type=float, help='Radius of the sphere with all the cameras', default=0.2)
     # input_param.add_argument('--label', type=list, help='label of the teeth',default=(["18","19","20","21","22","23","24","25","26","27","28","29","30","31"]))
     # input_param.add_argument('--label', type=list, help='label of the teeth',default=(["2","3","4","5","6","7","8","9","10","11","12","13","14","15"]))
 
-    input_param.add_argument('--label', type=str, help='label of the teeth',default="15")
+    input_param.add_argument('--label', type=str, help='label of the teeth',default="31")
 
     #Training data
+    input_param.add_argument('--num_device',type=str, help='cuda:0 or cuda:1', default='0')
     input_param.add_argument('--image_size',type=int, help='size of the picture', default=224)
     input_param.add_argument('--blur_radius',type=int, help='blur raius', default=0)
     input_param.add_argument('--faces_per_pixel',type=int, help='faces per pixels', default=1)
@@ -135,7 +153,7 @@ if __name__ == '__main__':
     # parser.add_argument('--nbr_pictures',type=int,help='number of pictures per tooth', default=5)
    
     output_params = parser.add_argument_group('Output parameters')
-    output_params.add_argument('--dir_models', type=str, help='Output directory with all the networks',default=parser.parse_args().dir_data+'/models/Upper/models_csv')
+    output_params.add_argument('--dir_models', type=str, help='Output directory with all the networks',default=parser.parse_args().dir_data+'/models/Lower/models_csv1')
 
     
     args = parser.parse_args()

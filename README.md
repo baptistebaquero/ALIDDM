@@ -10,7 +10,7 @@ It scales the mesh to the unit sphere, it captures 2D views from 5 different vie
 
 
 <img width="575" alt="results" src="https://user-images.githubusercontent.com/83285614/160682839-c33312b1-0e55-48e5-8b9b-844932e4d48e.png" title="results and accuracy">
-<img width="549" alt="training" src="https://user-images.githubusercontent.com/83285614/160683370-b31110b1-ecc6-4f1d-9e35-e79c80a1daca.png"title= "Patches' prediction" >
+<img width="549" alt="training" src="https://user-images.githubusercontent.com/83285614/160683370-b31110b1-ecc6-4f1d-9e35-e79c80a1daca.png" title= "Patches' prediction" >
 
 
 ## Running the training code:
