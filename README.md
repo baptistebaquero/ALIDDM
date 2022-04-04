@@ -18,10 +18,35 @@ It scales the mesh to the unit sphere, it captures 2D views from 5 different vie
 ```bash
 python3 main.py --dir_project 'project directory' --dir_data 'data directory' --dir_patients 'patients directory' --csv_file 'csv file' --jaw 'U or L' --label 'tooth number' --batch_size 'default=10' --max_epoch 'default=300' --dir_models 'Output directory with all the networks'
 ```
+```
+All the parameters :
+   --dir_project : dataset directory
+   --dir_data : Input directory with all the data
+   --dir_patients : Input directory with the meshes
+   --csv_file : CSV of the data split
+   
+   --jaw : Prepare the data for uper or lower landmark training (ex: L U), default="L"
+   --sphere_radius : Radius of the sphere with all the cameras, default=0.2
+   --label : label of the teeth
+   --num_device : cuda:0 or cuda:1, default='0'
+   --image_size : size of the picture, default=224
+   --blur_radius : blur raius, default=0
+   --faces_per_pixel : faces per pixels, default=1
+   --batch_size : Batch size, default=10
+   --num_classes : number of classes, default=4
+   --max_epoch : Number of training epocs, default=300
+   --val_freq : Validation frequency, default=1
+   --val_percentage : Percentage of data to keep for validation, default=10
+   --test_percentage : Percentage of data to keep for test, default=20
+   --learning_rate : Learning rate, default=1e-4
+   --dir_models : Output directory with all the networks
+```
 
 ## Running the prediction code:
 prerequisites : Good model's orientation and segmentation of each tooth with Universal labelling. 
 ```bash
 python3 prediction.py --vtk_dir 'path of the 3D model' --model_U --model_L --jaw --sphere_radius --out_path 'path where jsonfile is saved'
 ```
+```
+
 
