@@ -136,7 +136,7 @@ class Agent:
     
     def get_view_rasterize(self,meshes):
         spc = self.positions
-        img_lst = torch.empty((0)).to(self.GV.DEVICE)
+        img_lst = torch.empty((0)).to(GV.DEVICE)
         tens_pix_to_face = torch.empty((0)).to(GV.DEVICE)
 
         for sp in self.camera_points:

@@ -12,40 +12,63 @@ import cv2 as cv
 from monai.transforms import AsDiscrete
 from monai.data import decollate_batch
 import shutil
+from scipy import linalg
 
 def main(args):
-    if args.jaw == "U":
+    sphere_points_L = ([0,0,1],
+                    np.array([0.5,0.,1.0])/linalg.norm([0.5,0.5,1.0]),
+                    np.array([-0.5,0.,1.0])/linalg.norm([-0.5,-0.5,1.0]),
+                    np.array([0,0.5,1])/linalg.norm([1,0,1]),
+                    np.array([0,-0.5,1])/linalg.norm([0,1,1])
+                    )
+    sphere_points_U = ([0,0,-1],
+                    np.array([0.5,0.,-1])/linalg.norm([0.5,0.5,-1]),
+                    np.array([-0.5,0.,-1])/linalg.norm([-0.5,-0.5,-1]),
+                    np.array([0,0.5,-1])/linalg.norm([1,0,-1]),
+                    np.array([0,-0.5,-1])/linalg.norm([0,1,-1])
+                    )
+    GV.DEVICE = torch.device(f"cuda:{args.num_device}" if torch.cuda.is_available() else "cpu")
+    GV.SELECTED_JAW = args.jaw
+    
+    if GV.SELECTED_JAW == "U":
         lst_label = args.label_U
         dir_model = args.model_U
         # csv_file = args.csv_file_U
+        GV.CAMERA_POSITION = np.array(sphere_points_U)
+
     else :
         lst_label = args.label_L
         dir_model = args.model_L
-        # csv_file = args.csv_file_L
-    
-    vtk_normpath = os.path.normpath("/".join([args.vtk_dir,'**','']))
+        csv_file = args.csv_file_L
+        GV.CAMERA_POSITION = np.array(sphere_points_L)
+
+    print(GV.CAMERA_POSITION)
+    print(csv_file)
+    print(lst_label)
+    print(dir_model)
+    # vtk_normpath = os.path.normpath("/".join([args.vtk_dir,'**','']))
     lst_vtkfiles = []
-    for vtkfile in sorted(glob.iglob(vtk_normpath, recursive=True)):
-        if os.path.isfile(vtkfile) and True in [ext in vtkfile for ext in [".vtk"]]:
-            lst_vtkfiles.append(vtkfile)
+    # for vtkfile in sorted(glob.iglob(vtk_normpath, recursive=True)):
+    #     if os.path.isfile(vtkfile) and True in [ext in vtkfile for ext in [".vtk"]]:
+    #         lst_vtkfiles.append(vtkfile)
     
     # print(lst_vtkfiles)
 
 
-    # df = pd.read_csv(args.csv_file)
-    # df_test = df.loc[df['for'] == "test"]
-    # # print(df_test['surf'])
-    # for vtkfile in df_test['surf']:
-    #     full_vtkfile = args.patient_path + '/' + vtkfile
-    #     # print(full_vtkfile)
-    #     lst_vtkfiles.append(full_vtkfile)
+    df = pd.read_csv(csv_file)
+    df_test = df.loc[df['for'] == "test"]
+    # print(df_test['surf'])
+    for vtkfile in df_test['surf']:
+        full_vtkfile = args.patient_path + '/' + vtkfile
+        # print(full_vtkfile)
+        lst_vtkfiles.append(full_vtkfile)
     
-    # print(lst_vtkfiles)
+    print(lst_vtkfiles)
     
 
 
     for path_vtk in lst_vtkfiles:
-        num_patient = os.path.basename(path_vtk).split('.')[0].split('_')[2]
+        num_patient = os.path.basename(path_vtk).split('.')[0].split('_')[1][1:]
         print(f"prediction for patient {num_patient} :", path_vtk )
         groupe_data = {}
         
@@ -57,7 +80,6 @@ def main(args):
             agent = Agent(
                 renderer=phong_renderer,
                 renderer2=mask_renderer,
-                device=GV.DEVICE,
                 radius=args.sphere_radius,
             )
 
@@ -66,7 +88,7 @@ def main(args):
             (V, F, CN, RI) = GetSurfProp(surf_unit, mean_arr, scale_factor)
      
             if int(label) in RI.squeeze(0):
-                agent.position_agent(RI,V,label,GV.DEVICE)
+                agent.position_agent(RI,V,label)
                 textures = TexturesVertex(verts_features=CN)
                 meshe = Meshes(
                             verts=V,   
@@ -131,7 +153,15 @@ def main(args):
                 last_num_faces_r = remove_extra_faces(F,num_faces_r,RI,int(label))
                 last_num_faces_g = remove_extra_faces(F,num_faces_g,RI,int(label))
                 last_num_faces_b = remove_extra_faces(F,num_faces_b,RI,int(label))       
-                
+               
+                # print(F.shape,RI.shape)
+                # print(F)
+                # print(RI)
+                # print("")
+                # print(last_num_faces_r)
+                # print('num_faces_r',len(num_faces_r))
+                # print('last_num_faces_r',len(last_num_faces_r))
+
                 dico_rgb = {}
                 dico_rgb[f'{GV.LABEL[label][0]}'] = last_num_faces_r
                 dico_rgb[f'{GV.LABEL[label][1]}'] = last_num_faces_g
@@ -174,9 +204,15 @@ def main(args):
  
         copy_file = os.path.join(out_path_jaw,os.path.basename(path_vtk))
         final_out_path = shutil.copy(path_vtk,copy_file)
+        
+        landmark_path = os.path.join(os.path.dirname(path_vtk),f"Lower_P{num_patient}.json")
+        if not os.path.exists(out_path):
+            os.makedirs(out_path)
+        copy_json_file =  os.path.join(out_path_jaw,os.path.basename(landmark_path))
+        final_outpath_json = shutil.copy(landmark_path,copy_json_file)
         # final_out_path = shutil.copytree(path_vtk,out_path_L)
 
-        WriteJson(lm_lst,os.path.join(out_path_jaw,f"Upper_P{num_patient}_Pred.json"))
+        WriteJson(lm_lst,os.path.join(out_path_jaw,f"Lower_P{num_patient}_Pred.json"))
 
 
 
@@ -196,30 +232,31 @@ if __name__ == '__main__':
 
     input_param = parser.add_argument_group('input files')
     # input_param.add_argument('--model_teeth', type=str, help='path of 3D model of the teeth of 1 patient', default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM/data/patients/P20/Lower/Lower_P20.vtk')
-    input_param.add_argument('--vtk_dir', type=str, help='path of 3D model of the teeth of 1 patient', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/Upper_jaw_lab')
-    # input_param.add_argument('--csv_file_L', type=str, help='path of the csv', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/data_splitfold1.csv')
+    # input_param.add_argument('--vtk_dir', type=str, help='path of 3D model of the teeth of 1 patient', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/Upper_jaw_lab')
+    input_param.add_argument('--csv_file_L', type=str, help='path of the csv', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/data_split/Lower/data_splitfold2.csv')
     # input_param.add_argument('--csv_file_U', type=str, help='path of the csv', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/data_split/Upper')
-    # input_param.add_argument('--patient_path', type=str, help='path of the patient folder', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/patients')
+    input_param.add_argument('--patient_path', type=str, help='path of the patient folder', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/patients')
 
     # input_param.add_argument('--model_teeth', type=str, help='path of 3D model of the teeth of 1 patient', default='/Users/luciacev-admin/Desktop/data_ALIDDM/data/Patients /P3/Lower/Lower_P3.vtk')
     # input_param.add_argument('--jsonfile', type=str, help='path of jsonfile of the teeth of 1 patient', default='/home/jonas/Desktop/Baptiste_Baquero/data_ALIDDM/data/patients/P10/Lower/Lower_P10.json')
 
     # Model directories
     input_param.add_argument('--model_U', type=str, help='loading of model', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/models/Upper/models_csv/')
-    input_param.add_argument('--model_L', type=str, help='loading of model', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/models/Lower/models_csv/')
+    input_param.add_argument('--model_L', type=str, help='loading of model', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/models/Lower/models_csv0')
 
     # Environment
-    input_param.add_argument('--jaw',type=str,help="Prepare the data for uper or lower landmark training (ex: L U)", default="U")
+    input_param.add_argument('--jaw',type=str,help="Prepare the data for uper or lower landmark training (ex: L U)", default="L")
     input_param.add_argument('--sphere_radius', type=float, help='Radius of the sphere with all the cameras', default=0.2)
-    input_param.add_argument('--label_L', type=list, help='label of the teeth',default=["18","19","20","21","22","23","24","25","26","27","28","29","30","31"])
+    input_param.add_argument('--label_L', type=list, help='label of the teeth',default=["18","19","20","21","22","23","24"])#,"25","26","27","28","29","30","31"])
     input_param.add_argument('--label_U', type=list, help='label of the teeth',default=(["2","3","4","5","6","7","8","9","10","11","12","13","14","15"]))
 
     # Prediction data
+    input_param.add_argument('--num_device',type=str, help='cuda:0 or cuda:1', default='0')
     input_param.add_argument('--image_size',type=int, help='size of the picture', default=224)
     input_param.add_argument('--blur_radius',type=int, help='blur raius', default=0)
     input_param.add_argument('--faces_per_pixel',type=int, help='faces per pixels', default=1)
  
-    input_param.add_argument('--out_path',type=str, help='path where jsonfile is saved', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/marcela')
+    input_param.add_argument('--out_path',type=str, help='path where jsonfile is saved', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/prediction/test2')
 
     args = parser.parse_args()
     main(args)

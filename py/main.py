@@ -119,7 +119,7 @@ if __name__ == '__main__':
     input_param.add_argument('--dir_project', type=str, help='dataset directory', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM')
     input_param.add_argument('--dir_data', type=str, help='Input directory with all the data', default=parser.parse_args().dir_project+'/data')
     input_param.add_argument('--dir_patients', type=str, help='Input directory with the meshes',default=parser.parse_args().dir_data+'/patients')
-    input_param.add_argument('--csv_file', type=str, help='CSV of the data split',default=parser.parse_args().dir_data+'/data_split/Lower/data_splitfold1.csv')
+    input_param.add_argument('--csv_file', type=str, help='CSV of the data split',default=parser.parse_args().dir_data+'/data_split/Lower/data_splitfold4.csv')
 
 
     #Environment
@@ -153,7 +153,7 @@ if __name__ == '__main__':
     # parser.add_argument('--nbr_pictures',type=int,help='number of pictures per tooth', default=5)
    
     output_params = parser.add_argument_group('Output parameters')
-    output_params.add_argument('--dir_models', type=str, help='Output directory with all the networks',default=parser.parse_args().dir_data+'/models/Lower/models_csv1')
+    output_params.add_argument('--dir_models', type=str, help='Output directory with all the networks',default=parser.parse_args().dir_data+'/models/Lower/models_csv4')
 
     
     args = parser.parse_args()

@@ -99,8 +99,10 @@ def ResultAccuracy(fiducial_dir):
         if os.path.isfile(img_fn) and ".json" in img_fn:
             baseName = os.path.basename(img_fn)
             patient = os.path.dirname(os.path.dirname(img_fn))
+            # print(img_fn)
+
             num_label_pred = os.path.basename(img_fn).split('_')[1][1:]
-            print(baseName,patient,num_label_pred)
+            # print(baseName,patient,num_label_pred)
             if patient not in patients.keys():
                 patients[patient] = {"Upper":{},"Lower":{}}
             if "_Pred" in baseName:
@@ -153,7 +155,7 @@ def ResultAccuracy(fiducial_dir):
                                 fail +=1
                             print("  ",lm,"error = ", dist)
                             f.write("  "+ str(lm)+" error = "+str(dist)+"\n")
-            f.write("\n")
+        f.write("\n")
         f.write("\n")
 
     print(fail,'fail')
@@ -177,6 +179,7 @@ def remove_extra_faces(F,num_faces,RI,label):
     last_num_faces =[]
     # print(num_faces)
     # print(RI)
+    # print(len(num_faces))
     for face in num_faces:
         # print('label :',label)
         # print('face :',face.item())
@@ -185,11 +188,12 @@ def remove_extra_faces(F,num_faces,RI,label):
         # print(F.shape)
         # print(F.squeeze(0)[int(face.item())])
         vertex_color = F.squeeze(0)[int(face.item())]
+        # print(vertex_color)
         for vert in vertex_color:
+            # print("vert :",vert)
+            # print(RI.squeeze(0)[vert])
             if RI.squeeze(0)[vert] == label:
-                # print("perfect")
                 last_num_faces.append(face)
-            else:
-                print('wrong label')
+            # else:
+            #     print('wrong label')
     return last_num_faces
-        
