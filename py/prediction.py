@@ -247,8 +247,13 @@ if __name__ == '__main__':
     # Environment
     input_param.add_argument('--jaw',type=str,help="Prepare the data for uper or lower landmark training (ex: L U)", default="L")
     input_param.add_argument('--sphere_radius', type=float, help='Radius of the sphere with all the cameras', default=0.2)
-    input_param.add_argument('--label_L', type=list, help='label of the teeth',default=["18","19","20","21","22","23","24"])#,"25","26","27","28","29","30","31"])
+<<<<<<< HEAD
+    input_param.add_argument('--label_L', type=list, help='label of the teeth',default=["18","19","20","21","22","23","24","25","26","27","28","29","30","31"])
     input_param.add_argument('--label_U', type=list, help='label of the teeth',default=(["2","3","4","5","6","7","8","9","10","11","12","13","14","15"]))
+=======
+    input_param.add_argument('--label_L', type=list, help='label of the teeth',default=["18","19","20","21","22","23","24","25","26","27","28","29","30","31"])
+    input_param.add_argument('--label_U', type=list, help='label of the teeth',default=["2","3","4","5","6","7","8","9","10","11","12","13","14","15"])
+>>>>>>> 0fee1977740368858afff95cc7e9098ef4faa9b3
 
     # Prediction data
     input_param.add_argument('--num_device',type=str, help='cuda:0 or cuda:1', default='0')
