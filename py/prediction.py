@@ -12,6 +12,7 @@ import cv2 as cv
 from monai.transforms import AsDiscrete
 from monai.data import decollate_batch
 import shutil
+import vtk
 from scipy import linalg
 
 def main(args):
