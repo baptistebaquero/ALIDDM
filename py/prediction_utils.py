@@ -133,10 +133,10 @@ def ResultAccuracy(fiducial_dir):
             print(" ",group,"landmarks:")
             f.write(" "+ str(group)+" landmarks:\n")
             print(targ_res.keys())
-            for label in range(0,32):
-                if f"pred_{label}" in targ_res.keys():
+            for pat in range(1,163):
+                if f"pred_{pat}" in targ_res.keys():
                     target_lm_dic = ReadJson(targ_res["target"])
-                    pred_lm_dic = ReadJson(targ_res[f"pred_{label}"])
+                    pred_lm_dic = ReadJson(targ_res[f"pred_{pat}"])
                     for lm,t_data in target_lm_dic.items():
                         if lm in pred_lm_dic.keys():
                             a = np.array([float(t_data["x"]),float(t_data["y"]),float(t_data["z"])])

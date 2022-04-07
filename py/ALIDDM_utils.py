@@ -76,7 +76,7 @@ def GenPhongRenderer(image_size,blur_radius,faces_per_pixel,device):
     return phong_renderer,mask_renderer
     
 
-def GenDataSet(df,dir_patients,flyBy,device,label):
+def GenDataSet(df,dir_patients,flyBy,device):
     SELECTED_JAW = GV.SELECTED_JAW
     df_train = df.loc[df['for'] == "train"]
     df_train = df_train.loc[df_train['jaw'] == SELECTED_JAW]

@@ -36,19 +36,21 @@ def main(args):
     GV.DEVICE = torch.device(f"cuda:{args.num_device}" if torch.cuda.is_available() else "cpu")
     if GV.SELECTED_JAW == "L":
         GV.CAMERA_POSITION = np.array(sphere_points_L)
+        lst_label = args.lst_label_l
     else:
         GV.CAMERA_POSITION = np.array(sphere_points_U)
+        lst_label = args.lst_label_u
 
     #GEN CSV
     # if not os.path.exists(args.):
     #     os.makedirs(out_path)
     # GenDataSplitCSV(args.dir_patients,args.csv_file,args.val_percentage,args.test_percentage)
     # SplitCSV_train_Val('/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM/data/data_split/Upper/data_split.csv',0.13)
+    
     phong_renderer,mask_renderer = GenPhongRenderer(args.image_size,args.blur_radius,args.faces_per_pixel,GV.DEVICE)
 
     df = pd.read_csv(args.csv_file)
-
-    train_data,val_data = GenDataSet(df,args.dir_patients,FlyByDataset,GV.DEVICE,args.label)
+    train_data,val_data = GenDataSet(df,args.dir_patients,FlyByDataset,GV.DEVICE)
     train_dataloader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True, collate_fn=pad_verts_faces)
     val_dataloader = DataLoader(val_data, batch_size=args.batch_size, shuffle=True, collate_fn=pad_verts_faces)
 
@@ -75,8 +77,11 @@ def main(args):
     best_metric_epoch =-1
     writer = SummaryWriter()
     
+    if not os.path.exists(args.dir_models):
+            os.makedirs(args.dir_models)
+
     for epoch in range(args.max_epoch):
-        # label = random.choice(args.label)
+        # for label in lst_label:
         Training(
             train_dataloader=train_dataloader,
             train_data=train_data,
@@ -86,7 +91,7 @@ def main(args):
             model=model,
             optimizer=optimizer,
             loss_function=loss_function,
-            label=args.label,
+            lst_label=lst_label,
             writer=writer,
             )
 
@@ -97,7 +102,7 @@ def main(args):
                 nb_epoch=args.max_epoch,
                 model=model,
                 agent=agent,
-                label=args.label,
+                lst_label=lst_label,
                 dice_metric=dice_metric,
                 best_metric=best_metric,
                 best_metric_epoch=best_metric_epoch,
@@ -119,16 +124,16 @@ if __name__ == '__main__':
     input_param.add_argument('--dir_project', type=str, help='dataset directory', default='/home/luciacev-admin/Desktop/Baptiste_Baquero/Project/ALIDDM')
     input_param.add_argument('--dir_data', type=str, help='Input directory with all the data', default=parser.parse_args().dir_project+'/data')
     input_param.add_argument('--dir_patients', type=str, help='Input directory with the meshes',default=parser.parse_args().dir_data+'/patients')
-    input_param.add_argument('--csv_file', type=str, help='CSV of the data split',default=parser.parse_args().dir_data+'/data_split/Lower/data_splitfold4.csv')
+    input_param.add_argument('--csv_file', type=str, help='CSV of the data split',default=parser.parse_args().dir_data+'/data_split/Lower/data_splitfold3.csv')
 
 
     #Environment
     input_param.add_argument('-j','--jaw',type=str,help="Prepare the data for uper or lower landmark training (ex: L U)", default="L")
     input_param.add_argument('-sr', '--sphere_radius', type=float, help='Radius of the sphere with all the cameras', default=0.2)
-    # input_param.add_argument('--label', type=list, help='label of the teeth',default=(["18","19","20","21","22","23","24","25","26","27","28","29","30","31"]))
-    # input_param.add_argument('--label', type=list, help='label of the teeth',default=(["2","3","4","5","6","7","8","9","10","11","12","13","14","15"]))
+    input_param.add_argument('--lst_label_l', type=list, help='label of the teeth',default=(["18","19","20","21","22","23","24","25","26","27","28","29","30","31"]))
+    input_param.add_argument('--lst_label_u', type=list, help='label of the teeth',default=(["2","3","4","5","6","7","8","9","10","11","12","13","14","15"]))
 
-    input_param.add_argument('--label', type=str, help='label of the teeth',default="31")
+    # input_param.add_argument('--label', type=str, help='label of the teeth',default="31")
 
     #Training data
     input_param.add_argument('--num_device',type=str, help='cuda:0 or cuda:1', default='0')
@@ -136,7 +141,7 @@ if __name__ == '__main__':
     input_param.add_argument('--blur_radius',type=int, help='blur raius', default=0)
     input_param.add_argument('--faces_per_pixel',type=int, help='faces per pixels', default=1)
     
-    input_param.add_argument('-bs', '--batch_size', type=int, help='Batch size', default=10)
+    input_param.add_argument('-bs', '--batch_size', type=int, help='Batch size', default=3)
     input_param.add_argument('-nc', '--num_classes', type=int, help='number of classes', default=4)
 
     # input_param.add_argument('-ds', '--data_size', type=int, help='Data size', default=100)
@@ -153,7 +158,7 @@ if __name__ == '__main__':
     # parser.add_argument('--nbr_pictures',type=int,help='number of pictures per tooth', default=5)
    
     output_params = parser.add_argument_group('Output parameters')
-    output_params.add_argument('--dir_models', type=str, help='Output directory with all the networks',default=parser.parse_args().dir_data+'/models/Lower/models_csv4')
+    output_params.add_argument('--dir_models', type=str, help='Output directory with all the networks',default=parser.parse_args().dir_data+'/models/Lower/test_unique_models_csv3')
 
     
     args = parser.parse_args()

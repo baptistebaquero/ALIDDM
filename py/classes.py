@@ -38,6 +38,7 @@ class FlyByDataset(Dataset):
 
     def __getitem__(self, idx):
         surf = ReadSurf(os.path.join(self.dataset_dir,self.df.iloc[idx]["surf"])) # list of dico like [{"model":... ,"landmarks":...},...]
+        # print(surf)
         surf, mean_arr, scale_factor= ScaleSurf(surf) # resize my surface to center it to [0,0,0], return the distance between the [0,0,0] and the camera center and the rescale_factor
         if self.rotate:
             surf, angle, vector = RandomRotation(surf)
